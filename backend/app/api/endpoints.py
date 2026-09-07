@@ -1,4 +1,4 @@
-﻿"""
+"""
 API Endpoints Router (app/api/endpoints.py)
 -------------------------------------------
 REST routes:
@@ -13,6 +13,8 @@ import json
 from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 import cv2
 import numpy as np
 from sklearn.cluster import KMeans
@@ -20,6 +22,7 @@ from skimage.color import rgb2lab
 
 from app.schemas.process import ProcessResponse
 from app.services.image_processor import process_pixel_art
+from app.services.pdf_generator import generate_bead_pdf
 from app.core.brands import get_all_brands_summary, get_brand_data, BRANDS_CATALOG
 from app.core.color_utils import hex_to_rgb, rgb_to_hex
 
@@ -168,3 +171,36 @@ async def process_image_endpoint(
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Image processing error: {str(exc)}")
+
+
+class ExportPdfRequest(BaseModel):
+    matrix: List[List[str]]
+    grid: Dict[str, Any]
+    color_counts: List[Dict[str, Any]]
+    brand: Optional[str] = "perler"
+    pegboard_size_cm: Optional[float] = 14.5
+
+
+@router.post("/export-pdf", summary="Export calibrated 1:1 scale printable A4 PDF")
+async def export_pdf_endpoint(payload: ExportPdfRequest):
+    """
+    Generates a millimeter-calibrated 1:1 scale printable A4 PDF
+    with direct pegboard overlay guidance, test ruler, and shopping checklist.
+    """
+    try:
+        pdf_buffer = generate_bead_pdf(
+            matrix=payload.matrix,
+            grid=payload.grid,
+            color_counts=payload.color_counts,
+            brand_id=payload.brand or "perler",
+            pegboard_size_cm=payload.pegboard_size_cm or 14.5
+        )
+        filename = f"{payload.brand or 'perler'}-pattern-1to1.pdf"
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"PDF generation error: {str(exc)}")
+

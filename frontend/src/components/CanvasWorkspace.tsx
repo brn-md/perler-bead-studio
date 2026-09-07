@@ -21,6 +21,7 @@ import {
   MousePointer,
   Undo2,
   Redo2,
+  Printer,
 } from "lucide-react";
 import { ProcessResponse, PhysicalParams, BrandInfo } from "@/types";
 
@@ -535,6 +536,46 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     params.beadSizeCm,
     colorSymbolMap,
   ]);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+
+  const handleDownloadPDF = async () => {
+    if (!data) return;
+    setIsExportingPdf(true);
+    try {
+      const payload = {
+        matrix: data.matrix,
+        grid: data.grid,
+        color_counts: data.color_counts,
+        brand: currentBrandObj?.id || selectedBrand || "perler",
+        pegboard_size_cm: params.pegboardSizeCm || 14.5,
+      };
+
+      const res = await fetch("http://localhost:8000/api/export-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to generate PDF");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${currentBrandObj?.id || "perler"}-pattern-1to1-scale.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("PDF export failed:", err);
+      alert(`Error generating PDF: ${err.message || "Network error"}`);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleDownloadPNG = () => {
     const canvas = canvasRef.current;
     if (!canvas || !data) return;
@@ -834,11 +875,21 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               </span>
             </div>
             <button
+              onClick={handleDownloadPDF}
+              disabled={isExportingPdf}
+              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold border border-emerald-500 flex items-center gap-1.5 transition-colors cursor-pointer shadow-lg shadow-emerald-950/40"
+              title="Printable 1:1 scale A4 PDF with pegboard alignment and shopping checklist"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              {isExportingPdf ? "Generating PDF..." : "Print 1:1 Scale PDF"}
+            </button>
+            <button
               onClick={handleDownloadPNG}
-              className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold border border-purple-500 flex items-center gap-1.5 transition-colors cursor-pointer shadow-lg shadow-purple-950/40"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Download image as PNG"
             >
               <Download className="w-3.5 h-3.5" />
-              Export {currentBrandObj?.badge || "Bead"} Pattern
+              PNG
             </button>
           </div>
         )}

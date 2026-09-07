@@ -66,4 +66,4 @@ temp/
 *.tmp
 backend/*.png
 backend/test_*.py
-backend/test_*.png
+backend/test_*.png*.pdf
