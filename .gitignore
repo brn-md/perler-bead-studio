@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+.pnp
+.pnp.js
+
+# Python Virtual Environments
+venv/
+.venv/
+env/
+backend/venv/
+backend/env/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+
+# Next.js Build Outputs
+.next/
+frontend/.next/
+out/
+frontend/out/
+
+# Environment Variables
+.env
+.env*.local
+*.env
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporary & Output artifacts
+tmp/
+temp/
+*.tmp
+backend/*.png
+backend/test_*.py
+backend/test_*.png

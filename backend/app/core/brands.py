@@ -1,0 +1,221 @@
+﻿"""
+Bead Brands Catalog Database (app/core/brands.py)
+-------------------------------------------------
+Supports official manufacturer palettes:
+1. Perler (USA standard)
+2. Hama (Danish standard)
+3. Artkal (Extensive high-precision standard)
+4. Nabbi (Scandinavian photo-pearl standard)
+5. MARD (Precision craft standard)
+"""
+
+from typing import List, Dict, Any, Optional
+
+BRANDS_CATALOG: Dict[str, Dict[str, Any]] = {
+    "perler": {
+        "id": "perler",
+        "name": "Perler Beads",
+        "country": "USA",
+        "badge": "Perler",
+        "description": "Standard 5mm Midi & 2.6mm Mini beads with vibrant iconic shades.",
+        "colors": [
+            {"code": "P01", "name": "White", "hex": "#FFFFFF"},
+            {"code": "P18", "name": "Black", "hex": "#000000"},
+            {"code": "P92", "name": "Grey", "hex": "#808080"},
+            {"code": "P93", "name": "Dark Grey", "hex": "#3A3A3A"},
+            {"code": "P94", "name": "Light Grey", "hex": "#D3D3D3"},
+            {"code": "P60", "name": "Toasted Marshmallow", "hex": "#F4EBD9"},
+            {"code": "P35", "name": "Tan", "hex": "#D2B48C"},
+            {"code": "P21", "name": "Light Brown", "hex": "#A0522D"},
+            {"code": "P12", "name": "Brown", "hex": "#603813"},
+            {"code": "P88", "name": "Cherry", "hex": "#7B1113"},
+            {"code": "P09", "name": "Red", "hex": "#D00000"},
+            {"code": "P91", "name": "Tangerine", "hex": "#FF4500"},
+            {"code": "P59", "name": "Orange", "hex": "#FF7F00"},
+            {"code": "P57", "name": "Cheddar", "hex": "#FFAA00"},
+            {"code": "P03", "name": "Yellow", "hex": "#FFD700"},
+            {"code": "P02", "name": "Pastel Yellow", "hex": "#FFF799"},
+            {"code": "P61", "name": "Kiwi Lime", "hex": "#7FFF00"},
+            {"code": "P16", "name": "Lime Green", "hex": "#32CD32"},
+            {"code": "P58", "name": "Pastel Green", "hex": "#77DD77"},
+            {"code": "P11", "name": "Green", "hex": "#008000"},
+            {"code": "P14", "name": "Dark Green", "hex": "#004D00"},
+            {"code": "P66", "name": "Olive", "hex": "#556B2F"},
+            {"code": "P96", "name": "Turquoise", "hex": "#40E0D0"},
+            {"code": "P62", "name": "Pastel Blue", "hex": "#AEC6CF"},
+            {"code": "P10", "name": "Light Blue", "hex": "#00BFFF"},
+            {"code": "P06", "name": "Blue", "hex": "#0000CD"},
+            {"code": "P08", "name": "Dark Blue", "hex": "#000080"},
+            {"code": "P07", "name": "Pastel Lavender", "hex": "#E0BBE4"},
+            {"code": "P13", "name": "Purple", "hex": "#6A0DAD"},
+            {"code": "P17", "name": "Plum", "hex": "#8B008B"},
+            {"code": "P54", "name": "Raspberry", "hex": "#C71585"},
+            {"code": "P79", "name": "Magenta", "hex": "#FF1493"},
+            {"code": "P83", "name": "Bubblegum", "hex": "#FF6B97"},
+            {"code": "P05", "name": "Pink", "hex": "#FF99C8"},
+            {"code": "P04", "name": "Blush / Peach", "hex": "#FFB6C1"},
+            {"code": "P85", "name": "Gold Metallic", "hex": "#D4AF37"},
+            {"code": "P86", "name": "Silver Metallic", "hex": "#C0C0C0"},
+            {"code": "P63", "name": "Clear / Translucent", "hex": "#E8ECEF"},
+        ]
+    },
+    "artkal": {
+        "id": "artkal",
+        "name": "Artkal Beads",
+        "country": "China",
+        "badge": "Artkal",
+        "description": "Over 200+ nuanced colors with ultra-smooth melting and high fidelity.",
+        "colors": [
+            {"code": "S01", "name": "Pure White", "hex": "#FFFFFF"},
+            {"code": "S02", "name": "Solid Black", "hex": "#000000"},
+            {"code": "S03", "name": "Charcoal Grey", "hex": "#303030"},
+            {"code": "S04", "name": "Medium Grey", "hex": "#707070"},
+            {"code": "S05", "name": "Silver Grey", "hex": "#B0B0B0"},
+            {"code": "S06", "name": "Platinum", "hex": "#E0E0E0"},
+            {"code": "S07", "name": "Bright Yellow", "hex": "#FFEE00"},
+            {"code": "S08", "name": "Lemon Yellow", "hex": "#FFF44F"},
+            {"code": "S09", "name": "Canary", "hex": "#FFDB58"},
+            {"code": "S10", "name": "Warm Orange", "hex": "#FF7700"},
+            {"code": "S11", "name": "Mandarin", "hex": "#FF5500"},
+            {"code": "S12", "name": "Crimson", "hex": "#CC0000"},
+            {"code": "S13", "name": "Scarlet", "hex": "#FF2400"},
+            {"code": "S14", "name": "Burgundy", "hex": "#800020"},
+            {"code": "S15", "name": "Sakura Pink", "hex": "#FFB7C5"},
+            {"code": "S16", "name": "Hot Pink", "hex": "#FF007F"},
+            {"code": "S17", "name": "Rose Pink", "hex": "#FF6699"},
+            {"code": "S18", "name": "Coral Pink", "hex": "#F88379"},
+            {"code": "S19", "name": "Deep Violet", "hex": "#4B0082"},
+            {"code": "S20", "name": "Orchid", "hex": "#DA70D6"},
+            {"code": "S21", "name": "Lavender", "hex": "#E6E6FA"},
+            {"code": "S22", "name": "Lilac", "hex": "#C8A2C8"},
+            {"code": "S23", "name": "Royal Blue", "hex": "#4169E1"},
+            {"code": "S24", "name": "Navy Blue", "hex": "#000080"},
+            {"code": "S25", "name": "Sky Blue", "hex": "#87CEEB"},
+            {"code": "S26", "name": "Baby Blue", "hex": "#B0E0E6"},
+            {"code": "S27", "name": "Cyan", "hex": "#00FFFF"},
+            {"code": "S28", "name": "Teal", "hex": "#008080"},
+            {"code": "S29", "name": "Forest Green", "hex": "#228B22"},
+            {"code": "S30", "name": "Grass Green", "hex": "#3CB371"},
+            {"code": "S31", "name": "Mint Green", "hex": "#98FF98"},
+            {"code": "S32", "name": "Apple Green", "hex": "#8DB600"},
+            {"code": "S33", "name": "Olive Green", "hex": "#556B2F"},
+            {"code": "S34", "name": "Chestnut Brown", "hex": "#5C2C16"},
+            {"code": "S35", "name": "Milk Chocolate", "hex": "#8B4513"},
+            {"code": "S36", "name": "Caramel", "hex": "#C68E17"},
+            {"code": "S37", "name": "Sand Beige", "hex": "#E8D8B8"},
+            {"code": "S38", "name": "Peach Skin", "hex": "#FFDAB9"},
+        ]
+    },
+    "hama": {
+        "id": "hama",
+        "name": "Hama Beads",
+        "country": "Denmark",
+        "badge": "Hama",
+        "description": "Original European ironing beads with classic color matching.",
+        "colors": [
+            {"code": "H01", "name": "White", "hex": "#FFFFFF"},
+            {"code": "H02", "name": "Cream", "hex": "#FFFDD0"},
+            {"code": "H03", "name": "Yellow", "hex": "#FFDC00"},
+            {"code": "H04", "name": "Orange", "hex": "#FF6F00"},
+            {"code": "H05", "name": "Red", "hex": "#D60000"},
+            {"code": "H06", "name": "Pink", "hex": "#FF69B4"},
+            {"code": "H07", "name": "Purple", "hex": "#800080"},
+            {"code": "H08", "name": "Blue", "hex": "#0000FF"},
+            {"code": "H09", "name": "Light Blue", "hex": "#87CEEB"},
+            {"code": "H10", "name": "Green", "hex": "#008000"},
+            {"code": "H11", "name": "Light Green", "hex": "#90EE90"},
+            {"code": "H12", "name": "Brown", "hex": "#8B4513"},
+            {"code": "H17", "name": "Grey", "hex": "#808080"},
+            {"code": "H18", "name": "Black", "hex": "#000000"},
+            {"code": "H20", "name": "Reddish Brown", "hex": "#A0522D"},
+            {"code": "H21", "name": "Light Brown", "hex": "#CD853F"},
+            {"code": "H22", "name": "Rust Red", "hex": "#B22222"},
+            {"code": "H27", "name": "Beige", "hex": "#F5F5DC"},
+            {"code": "H43", "name": "Pastel Yellow", "hex": "#FFF68F"},
+            {"code": "H44", "name": "Pastel Red", "hex": "#FF6B6B"},
+            {"code": "H45", "name": "Pastel Purple", "hex": "#DDA0DD"},
+            {"code": "H46", "name": "Pastel Blue", "hex": "#B0E0E6"},
+            {"code": "H47", "name": "Pastel Green", "hex": "#98FB98"},
+            {"code": "H48", "name": "Pastel Pink", "hex": "#FFB7C5"},
+            {"code": "H70", "name": "Light Grey", "hex": "#C8C8C8"},
+            {"code": "H71", "name": "Dark Grey", "hex": "#505050"},
+        ]
+    },
+    "nabbi": {
+        "id": "nabbi",
+        "name": "Nabbi / PhotoPearls",
+        "country": "Sweden",
+        "badge": "Nabbi",
+        "description": "Engineered specially in Scandinavia for realistic photo portraits.",
+        "colors": [
+            {"code": "N01", "name": "White", "hex": "#FFFFFF"},
+            {"code": "N02", "name": "Black", "hex": "#000000"},
+            {"code": "N03", "name": "Dark Grey", "hex": "#404040"},
+            {"code": "N04", "name": "Light Grey", "hex": "#A0A0A0"},
+            {"code": "N05", "name": "Cream White", "hex": "#FDF5E6"},
+            {"code": "N06", "name": "Lemon Yellow", "hex": "#FFFF66"},
+            {"code": "N07", "name": "Warm Yellow", "hex": "#FFCC00"},
+            {"code": "N08", "name": "Orange", "hex": "#FF6600"},
+            {"code": "N09", "name": "Bright Red", "hex": "#EE0000"},
+            {"code": "N10", "name": "Wine Red", "hex": "#8B0000"},
+            {"code": "N11", "name": "Baby Pink", "hex": "#FFB6C1"},
+            {"code": "N12", "name": "Cerise Pink", "hex": "#DE3163"},
+            {"code": "N13", "name": "Violet", "hex": "#7B1FA2"},
+            {"code": "N14", "name": "Lavender", "hex": "#BA68C8"},
+            {"code": "N15", "name": "Ultramarine", "hex": "#1976D2"},
+            {"code": "N16", "name": "Sky Blue", "hex": "#4FC3F7"},
+            {"code": "N17", "name": "Turquoise", "hex": "#00BCD4"},
+            {"code": "N18", "name": "Emerald Green", "hex": "#388E3C"},
+            {"code": "N19", "name": "Lime Green", "hex": "#8BC34A"},
+            {"code": "N20", "name": "Olive", "hex": "#689F38"},
+            {"code": "N21", "name": "Espresso Brown", "hex": "#4E342E"},
+            {"code": "N22", "name": "Ochre", "hex": "#8D6E63"},
+            {"code": "N23", "name": "Skin / Sand", "hex": "#D7CCC8"},
+        ]
+    },
+    "mard": {
+        "id": "mard",
+        "name": "MARD Beads",
+        "country": "International",
+        "badge": "MARD",
+        "description": "High-durability pixel beads popular for gaming art and anime sprites.",
+        "colors": [
+            {"code": "M01", "name": "Titanium White", "hex": "#FFFFFF"},
+            {"code": "M02", "name": "Carbon Black", "hex": "#000000"},
+            {"code": "M03", "name": "Anthracite", "hex": "#2F4F4F"},
+            {"code": "M04", "name": "Slate Grey", "hex": "#708090"},
+            {"code": "M05", "name": "Silver Grey", "hex": "#C0C0C0"},
+            {"code": "M06", "name": "Canary Yellow", "hex": "#FFEF00"},
+            {"code": "M07", "name": "Sunset Orange", "hex": "#FD5E53"},
+            {"code": "M08", "name": "Ruby Red", "hex": "#9B111E"},
+            {"code": "M09", "name": "Coral Pink", "hex": "#F88379"},
+            {"code": "M10", "name": "Flamingo Pink", "hex": "#FC8EAC"},
+            {"code": "M11", "name": "Amethyst Violet", "hex": "#9966CC"},
+            {"code": "M12", "name": "Ultramarine Blue", "hex": "#120A8F"},
+            {"code": "M13", "name": "Cerulean Blue", "hex": "#007BA7"},
+            {"code": "M14", "name": "Emerald Green", "hex": "#50C878"},
+            {"code": "M15", "name": "Olive Green", "hex": "#808000"},
+            {"code": "M16", "name": "Espresso Brown", "hex": "#4B382A"},
+            {"code": "M17", "name": "Caramel Tan", "hex": "#A07855"},
+            {"code": "M18", "name": "Ivory Beige", "hex": "#EFEBD9"},
+        ]
+    }
+}
+
+def get_brand_data(brand_id: Optional[str] = None) -> Dict[str, Any]:
+    b_id = (brand_id or "perler").lower().strip()
+    return BRANDS_CATALOG.get(b_id, BRANDS_CATALOG["perler"])
+
+def get_all_brands_summary() -> List[Dict[str, Any]]:
+    summary = []
+    for b_id, b_data in BRANDS_CATALOG.items():
+        summary.append({
+            "id": b_id,
+            "name": b_data["name"],
+            "country": b_data.get("country", ""),
+            "badge": b_data.get("badge", b_data["name"]),
+            "description": b_data.get("description", ""),
+            "count": len(b_data["colors"]),
+            "colors": b_data["colors"]
+        })
+    return summary
