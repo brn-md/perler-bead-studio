@@ -79,7 +79,7 @@ def process_pixel_art(
     isolate_subject: bool = True,
     background_mode: str = "cutout",
     grid_mode: str = "auto",
-    bg_tolerance: float = 30.0,
+    bg_tolerance: float = 18.0,
     flat_colors: bool = False,
     custom_bg_hex: Optional[str] = None,
     decode_cell_codes: bool = False,

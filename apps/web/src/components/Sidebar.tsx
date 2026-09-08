@@ -699,7 +699,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex-1 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   Filtros Avançados & Correção
-                  {(params.gridMode === "force" || params.flatColors || params.decodeCellCodes || params.sampleCornersBg || params.detectRedDividers || params.customBgHex || (params.bgTolerance && params.bgTolerance !== 30)) && (
+                  {(params.gridMode === "force" || params.flatColors || params.decodeCellCodes || params.sampleCornersBg || params.detectRedDividers || params.customBgHex || (params.bgTolerance && params.bgTolerance !== 18)) && (
                     <span className="px-1.5 py-0.2 text-[9px] bg-pink-500/20 text-pink-300 rounded-full border border-pink-500/30">
                       Ativo
                     </span>
@@ -718,31 +718,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="pt-2 border-t border-slate-800/80 space-y-3 animate-in fade-in duration-200">
               {/* Presets de Correção Inteligente */}
               <div className="space-y-2">
-                <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-pink-400" />
+                <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
+                  <Wand2 className="w-3 h-3 text-purple-400" />
                   Presets de Correção Rápida
                 </span>
                 <div className="grid grid-cols-1 gap-1.5">
-                  {/* Preset 1: Pixel Art / Fundo Colorido */}
+                  {/* Preset 1: Hello Kitty / Pixel Art com Sombra */}
                   <button
                     type="button"
                     onClick={() => {
                       onParamsChange({
                         ...params,
                         gridMode: "force",
-                        bgTolerance: 35,
                         flatColors: true,
+                        bgTolerance: 18,
+                        decodeCellCodes: false,
                         backgroundMode: "cutout",
                       });
                     }}
                     className={`w-full py-2 px-2.5 rounded-lg text-xs font-semibold border text-left transition-all cursor-pointer ${
-                      params.gridMode === "force" && params.flatColors
-                        ? "bg-pink-950/80 border-pink-500 text-pink-200 shadow-sm"
-                        : "bg-slate-950/80 border-slate-800 text-slate-300 hover:border-pink-900 hover:text-white"
+                      (params.gridMode === "force" && params.flatColors)
+                        ? "bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm"
+                        : "bg-slate-950/80 border-slate-800 text-slate-300 hover:border-purple-900 hover:text-white"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3 text-pink-400" />
                         <span>✨ Otimizar Pixel Art & Fundo Colorido</span>
                       </span>
                       {params.gridMode === "force" && params.flatColors && (
@@ -764,7 +766,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         decodeCellCodes: true,
                         sampleCornersBg: true,
                         detectRedDividers: true,
-                        bgTolerance: 30,
+                        bgTolerance: 18,
                         flatColors: false,
                         backgroundMode: "cutout",
                       });
@@ -1028,22 +1030,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       Tolerância de Fundo (ΔE):
                     </label>
                     <span className="text-[10px] text-purple-300 font-mono font-semibold">
-                      {params.bgTolerance ?? 30}
+                      {params.bgTolerance ?? 18}
                     </span>
                   </div>
                   <input
                     type="range"
-                    min="10"
-                    max="60"
-                    step="5"
-                    value={params.bgTolerance ?? 30}
+                    min="5"
+                    max="50"
+                    step="1"
+                    value={params.bgTolerance ?? 18}
                     onChange={(e) => handleInputChange("bgTolerance", parseFloat(e.target.value))}
                     className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
                   />
                   <div className="flex justify-between text-[8.5px] text-slate-500 font-mono">
-                    <span>10 (Estrito)</span>
-                    <span>30 (Padrão)</span>
-                    <span>60 (Amplo)</span>
+                    <span>5 (Muito Estrito)</span>
+                    <span>18 (Padrão)</span>
+                    <span>50 (Amplo)</span>
                   </div>
                 </div>
               </div>
@@ -1077,7 +1079,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
 
               {/* Botão Reset */}
-              {(params.gridMode !== "auto" || params.flatColors || params.bgTolerance !== 30 || params.customBgHex || params.decodeCellCodes || params.sampleCornersBg || params.detectRedDividers) && (
+              {(params.gridMode !== "auto" || params.flatColors || params.bgTolerance !== 18 || params.customBgHex || params.decodeCellCodes || params.sampleCornersBg || params.detectRedDividers) && (
                 <div className="pt-1 flex justify-end">
                   <button
                     type="button"
@@ -1085,7 +1087,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onParamsChange({
                         ...params,
                         gridMode: "auto",
-                        bgTolerance: 30,
+                        bgTolerance: 18,
                         flatColors: false,
                         customBgHex: undefined,
                         decodeCellCodes: false,

@@ -125,7 +125,7 @@ def detect_red_grid_lines(img_bgr: np.ndarray) -> Optional[dict]:
 def detect_annotated_chart(
     img_bgr: np.ndarray,
     custom_bg_hex: Optional[str] = None,
-    bg_tolerance: float = 30.0,
+    bg_tolerance: float = 18.0,
     sample_corners_bg: bool = False,
     detect_red_dividers: bool = False
 ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
@@ -260,7 +260,7 @@ def detect_annotated_chart(
 def detect_and_sample_grid_template(
     img_bgr: np.ndarray,
     force_grid: bool = False,
-    bg_tolerance: float = 30.0,
+    bg_tolerance: float = 18.0,
     custom_bg_hex: Optional[str] = None,
     sample_corners_bg: bool = False,
     detect_red_dividers: bool = False

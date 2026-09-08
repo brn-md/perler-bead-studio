@@ -26,7 +26,7 @@ export default function Home() {
     enhanceEdges: true,
     backgroundMode: "cutout",
     gridMode: "auto",
-    bgTolerance: 30,
+    bgTolerance: 18,
     flatColors: false,
     decodeCellCodes: false,
     sampleCornersBg: false,
@@ -88,7 +88,7 @@ export default function Home() {
       formData.append("isolate_subject", "true");
       formData.append("background_mode", params.backgroundMode);
       formData.append("grid_mode", params.gridMode || "auto");
-      formData.append("bg_tolerance", (params.bgTolerance ?? 30).toString());
+      formData.append("bg_tolerance", (params.bgTolerance ?? 18).toString());
       formData.append("flat_colors", params.flatColors ? "true" : "false");
       formData.append("decode_cell_codes", params.decodeCellCodes ? "true" : "false");
       formData.append("sample_corners_bg", params.sampleCornersBg ? "true" : "false");
