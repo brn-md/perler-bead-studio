@@ -14,6 +14,7 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   XCircle,
   Pencil,
   Eraser,
@@ -53,6 +54,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const [zoom, setZoom] = useState<number>(1);
   const [viewMode, setViewMode] = useState<"beads" | "melted" | "flat">("beads");
   const [meltStyle, setMeltStyle] = useState<"standard" | "flat_melt">("standard");
+  const [showMeltMenu, setShowMeltMenu] = useState<boolean>(false);
   const [showRuler, setShowRuler] = useState<boolean>(true);
   const [showSymbols, setShowSymbols] = useState<boolean>(false);
   const [showPegboard, setShowPegboard] = useState<boolean>(true);
@@ -900,10 +902,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 type="button"
                 onClick={() => handleOpenSwapModal()}
                 className="px-2 py-1 text-slate-300 hover:text-white hover:bg-purple-950/60 rounded text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
-                title="Substituição de Cor em Massa (Atalho: R)"
+                title="Mass Color Swap (Shortcut: R)"
               >
                 <ArrowLeftRight className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                <span className="hidden xl:inline text-[11px] whitespace-nowrap">Trocar Cor</span>
+                <span className="hidden xl:inline text-[11px] whitespace-nowrap">Swap</span>
               </button>
             </div>
           )}
@@ -915,10 +917,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 type="button"
                 onClick={() => setShowPaintPicker(!showPaintPicker)}
                 className="flex items-center gap-1.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-purple-600 rounded-lg px-2.5 py-1.5 text-xs transition-all cursor-pointer whitespace-nowrap"
-                title="Escolher cor da miçanga para pintar"
+                title="Choose bead color to paint"
               >
                 <span className="text-[10px] uppercase font-semibold text-slate-400 hidden sm:inline">
-                  Cor:
+                  Color:
                 </span>
                 <span
                   className="w-3.5 h-3.5 rounded-full border border-black/40 shadow-inner shrink-0"
@@ -939,81 +941,87 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 />
               </button>
 
-              {/* Bead Picker Dropdown */}
+              {/* Bead Picker Dropdown with Backdrop */}
               {showPaintPicker && (
-                <div className="absolute left-0 top-full mt-2 w-72 max-h-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2.5 z-50 overflow-y-auto space-y-3">
-                  {/* Current Pattern Beads */}
-                  <div>
-                    <div className="text-[10px] uppercase font-bold text-slate-400 mb-1.5 px-1">
-                      Beads in this Pattern ({data.color_counts.length})
-                    </div>
-                    <div className="grid grid-cols-2 gap-1">
-                      {data.color_counts.map((item) => (
-                        <button
-                          key={item.hex}
-                          type="button"
-                          onClick={() => {
-                            setActiveColor(item.hex);
-                            setShowPaintPicker(false);
-                          }}
-                          className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-left transition-colors cursor-pointer ${
-                            activeColor.toUpperCase() === item.hex.toUpperCase()
-                              ? "bg-purple-950 border-purple-500 text-purple-200"
-                              : "bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300"
-                          }`}
-                        >
-                          <span
-                            className="w-3.5 h-3.5 rounded-full border border-black/40 shadow-inner shrink-0"
-                            style={{ backgroundColor: item.hex }}
-                          />
-                          <span className="text-[10px] font-mono font-bold text-slate-200 whitespace-nowrap">
-                            {item.code || ""}
-                          </span>
-                          <span className="text-[10px] text-slate-400 truncate">
-                            {item.name || ""}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* All Brand Beads */}
-                  {currentBrandObj && currentBrandObj.colors && (
-                    <div className="border-t border-slate-800 pt-2">
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowPaintPicker(false)}
+                  />
+                  <div className="absolute left-0 top-full mt-2 w-72 max-h-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2.5 z-50 overflow-y-auto space-y-3">
+                    {/* Current Pattern Beads */}
+                    <div>
                       <div className="text-[10px] uppercase font-bold text-slate-400 mb-1.5 px-1">
-                        All {currentBrandObj.name} Beads ({currentBrandObj.count})
+                        Beads in this Pattern ({data.color_counts.length})
                       </div>
-                      <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto pr-1">
-                        {currentBrandObj.colors.map((c) => (
+                      <div className="grid grid-cols-2 gap-1">
+                        {data.color_counts.map((item) => (
                           <button
-                            key={c.code}
+                            key={item.hex}
                             type="button"
                             onClick={() => {
-                              setActiveColor(c.hex);
+                              setActiveColor(item.hex);
                               setShowPaintPicker(false);
                             }}
                             className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-left transition-colors cursor-pointer ${
-                              activeColor.toUpperCase() === c.hex.toUpperCase()
+                              activeColor.toUpperCase() === item.hex.toUpperCase()
                                 ? "bg-purple-950 border-purple-500 text-purple-200"
                                 : "bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300"
                             }`}
                           >
                             <span
                               className="w-3.5 h-3.5 rounded-full border border-black/40 shadow-inner shrink-0"
-                              style={{ backgroundColor: c.hex }}
+                              style={{ backgroundColor: item.hex }}
                             />
                             <span className="text-[10px] font-mono font-bold text-slate-200 whitespace-nowrap">
-                              {c.code}
+                              {item.code || ""}
                             </span>
                             <span className="text-[10px] text-slate-400 truncate">
-                              {c.name}
+                              {item.name || ""}
                             </span>
                           </button>
                         ))}
                       </div>
                     </div>
-                  )}
-                </div>
+
+                    {/* All Brand Beads */}
+                    {currentBrandObj && currentBrandObj.colors && (
+                      <div className="border-t border-slate-800 pt-2">
+                        <div className="text-[10px] uppercase font-bold text-slate-400 mb-1.5 px-1">
+                          All {currentBrandObj.name} Beads ({currentBrandObj.count})
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto pr-1">
+                          {currentBrandObj.colors.map((c) => (
+                            <button
+                              key={c.code}
+                              type="button"
+                              onClick={() => {
+                                setActiveColor(c.hex);
+                                setShowPaintPicker(false);
+                              }}
+                              className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-left transition-colors cursor-pointer ${
+                                activeColor.toUpperCase() === c.hex.toUpperCase()
+                                  ? "bg-purple-950 border-purple-500 text-purple-200"
+                                  : "bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300"
+                              }`}
+                            >
+                              <span
+                                className="w-3.5 h-3.5 rounded-full border border-black/40 shadow-inner shrink-0"
+                                style={{ backgroundColor: c.hex }}
+                              />
+                              <span className="text-[10px] font-mono font-bold text-slate-200 whitespace-nowrap">
+                                {c.code}
+                              </span>
+                              <span className="text-[10px] text-slate-400 truncate">
+                                {c.name}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -1030,23 +1038,92 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   ? "bg-purple-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-white"
               }`}
-              title="Visualização 3D com miçangas abertas e furos (pré-ferro)"
+              title="Bead View (3D open beads before ironing)"
             >
               <CircleDot className="w-3.5 h-3.5 shrink-0" />
-              <span>Miçangas</span>
+              <span>Beads</span>
             </button>
-            <button
-              onClick={() => setViewMode("melted")}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                viewMode === "melted"
-                  ? "bg-amber-600 text-white shadow-sm shadow-amber-950/40"
-                  : "text-slate-400 hover:text-white"
-              }`}
-              title="Simulação do resultado após passar o ferro quente (miçangas fundidas)"
-            >
-              <Flame className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-              <span>Passado</span>
-            </button>
+
+            {/* Melted Button with Dropdown Chevron - 100% FIXED WIDTH, ZERO LAYOUT SHIFT */}
+            <div className="relative flex items-center">
+              <button
+                onClick={() => setViewMode("melted")}
+                className={`px-2 py-1 rounded-l text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                  viewMode === "melted"
+                    ? "bg-amber-600 text-white shadow-sm shadow-amber-950/40"
+                    : "text-slate-400 hover:text-white"
+                }`}
+                title="Melted View (Ironed beads simulation)"
+              >
+                <Flame className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                <span>Melted</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (viewMode !== "melted") setViewMode("melted");
+                  setShowMeltMenu(!showMeltMenu);
+                }}
+                className={`px-1 py-1 rounded-r border-l text-xs font-semibold transition-all flex items-center cursor-pointer ${
+                  viewMode === "melted"
+                    ? "bg-amber-600 text-white border-amber-700 hover:bg-amber-500"
+                    : "text-slate-400 hover:text-white border-slate-800 hover:bg-slate-900"
+                }`}
+                title="Melt options: Standard vs Full Melt"
+              >
+                <ChevronDown className={`w-3 h-3 transition-transform ${showMeltMenu ? "rotate-180" : ""}`} />
+              </button>
+
+              {/* Floating Popover Dropdown - ZERO LAYOUT SHIFT */}
+              {showMeltMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowMeltMenu(false)}
+                  />
+                  <div
+                    className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-48 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5 z-50 space-y-1 animate-in fade-in zoom-in-95 duration-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1 tracking-wider">
+                      Melt Fusion Style
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMeltStyle("standard");
+                        setShowMeltMenu(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                        meltStyle === "standard"
+                          ? "bg-amber-600 text-white font-semibold shadow-sm"
+                          : "text-slate-300 hover:bg-slate-800"
+                      }`}
+                    >
+                      <span>Standard Melt</span>
+                      <span className="text-[10px] opacity-75 font-mono">Pinholes</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMeltStyle("flat_melt");
+                        setShowMeltMenu(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                        meltStyle === "flat_melt"
+                          ? "bg-amber-600 text-white font-semibold shadow-sm"
+                          : "text-slate-300 hover:bg-slate-800"
+                      }`}
+                    >
+                      <span>Full Melt</span>
+                      <span className="text-[10px] opacity-75 font-mono">Solid</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
               onClick={() => setViewMode("flat")}
               className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
@@ -1054,42 +1131,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   ? "bg-purple-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-white"
               }`}
-              title="Visualização vetorial simples 2D"
+              title="Flat 2D pixel view"
             >
               <Square className="w-3.5 h-3.5 shrink-0" />
               <span>Flat</span>
             </button>
           </div>
-
-          {/* Sub-selector for Melted Style when Melted is active */}
-          {viewMode === "melted" && (
-            <div className="flex items-center bg-amber-950/40 border border-amber-800/60 rounded-lg p-0.5 text-[10px] animate-in fade-in duration-150 shrink-0">
-              <button
-                type="button"
-                onClick={() => setMeltStyle("standard")}
-                className={`px-2 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
-                  meltStyle === "standard"
-                    ? "bg-amber-600 text-white font-bold shadow-sm"
-                    : "text-amber-300 hover:text-white"
-                }`}
-                title="Fusão média clássica com furinho reduzido"
-              >
-                Padrão
-              </button>
-              <button
-                type="button"
-                onClick={() => setMeltStyle("flat_melt")}
-                className={`px-2 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
-                  meltStyle === "flat_melt"
-                    ? "bg-amber-600 text-white font-bold shadow-sm"
-                    : "text-amber-300 hover:text-white"
-                }`}
-                title="Fusão total sem furo (Flat Melt)"
-              >
-                100% Fundido
-              </button>
-            </div>
-          )}
 
           {/* FEATURE TOGGLES */}
           <div className="flex items-center gap-1 pl-1.5 border-l border-slate-800 shrink-0">
@@ -1100,10 +1147,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   ? "bg-purple-950 border-purple-600 text-purple-200"
                   : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
               }`}
-              title="Exibir régua de coordenadas (123)"
+              title="Toggle coordinate ruler numbers (123)"
             >
               <Eye className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden xl:inline">Régua</span>
+              <span className="hidden xl:inline">Ruler</span>
             </button>
 
             <button
@@ -1113,10 +1160,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   ? "bg-purple-950 border-purple-600 text-purple-200"
                   : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
               }`}
-              title="Exibir símbolos de cor nas miçangas"
+              title="Toggle color symbols inside beads"
             >
               <Hash className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden xl:inline">Símbolos</span>
+              <span className="hidden xl:inline">Symbols</span>
             </button>
 
             <button
@@ -1126,10 +1173,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   ? "bg-rose-950 border-rose-600 text-rose-300"
                   : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
               }`}
-              title="Exibir divisões das placas pegboards"
+              title="Toggle pegboard modular boundaries"
             >
               <Grid3X3 className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden xl:inline">Placas</span>
+              <span className="hidden xl:inline">Pegboards</span>
             </button>
           </div>
         </div>
@@ -1149,17 +1196,17 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               onClick={handleDownloadPDF}
               disabled={isExportingPdf}
               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold border border-emerald-500/80 flex items-center gap-1.5 transition-colors cursor-pointer shadow-md shadow-emerald-950/40 whitespace-nowrap shrink-0"
-              title="Gerar PDF em Escala 1:1 com gabarito para colocar embaixo da placa"
+              title="Printable 1:1 scale actual size PDF pattern"
             >
               <Printer className="w-3.5 h-3.5 shrink-0" />
-              <span>{isExportingPdf ? "Gerando PDF..." : "Imprimir 1:1 (PDF)"}</span>
+              <span>{isExportingPdf ? "Generating..." : "Print 1:1 (PDF)"}</span>
             </button>
 
             {/* Export PNG */}
             <button
               onClick={handleDownloadPNG}
               className="px-2.5 py-1.5 bg-slate-950 hover:bg-slate-900 text-slate-200 rounded-lg text-xs font-semibold border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
-              title="Exportar imagem do padrão como PNG"
+              title="Download pattern image as PNG"
             >
               <Download className="w-3.5 h-3.5 shrink-0" />
               <span>PNG</span>
@@ -1287,10 +1334,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   type="button"
                   onClick={() => handleOpenSwapModal(focusedItemInfo.hex)}
                   className="px-2 py-0.5 rounded bg-purple-900/80 hover:bg-purple-800 border border-purple-500/60 text-purple-200 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors ml-1"
-                  title="Substituir todas as miçangas desta cor"
+                  title="Swap all beads of this color (R)"
                 >
                   <ArrowLeftRight className="w-3 h-3" />
-                  <span>Trocar</span>
+                  <span>Swap</span>
                 </button>
                 <button
                   type="button"
@@ -1370,7 +1417,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       handleOpenSwapModal(item.hex);
                     }}
                     className="p-1 rounded hover:bg-white/10 text-slate-500 hover:text-purple-300 transition-colors opacity-70 group-hover/chip:opacity-100 ml-0.5"
-                    title={`Substituir todas as ${item.count} miçangas desta cor...`}
+                    title={`Swap all ${item.count} beads of this color...`}
                   >
                     <ArrowLeftRight className="w-3 h-3" />
                   </button>
