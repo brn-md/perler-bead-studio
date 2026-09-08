@@ -23,6 +23,7 @@ import {
   Redo2,
   Printer,
   ArrowLeftRight,
+  Flame,
 } from "lucide-react";
 import { ProcessResponse, PhysicalParams, BrandInfo } from "@/types";
 import { ColorSwapModal } from "./ColorSwapModal";
@@ -50,7 +51,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [zoom, setZoom] = useState<number>(1);
-  const [viewMode, setViewMode] = useState<"beads" | "flat">("beads");
+  const [viewMode, setViewMode] = useState<"beads" | "melted" | "flat">("beads");
+  const [meltStyle, setMeltStyle] = useState<"standard" | "flat_melt">("standard");
   const [showRuler, setShowRuler] = useState<boolean>(true);
   const [showSymbols, setShowSymbols] = useState<boolean>(false);
   const [showPegboard, setShowPegboard] = useState<boolean>(true);
@@ -512,6 +514,70 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             ctx.arc(cx, cy, outerR + 1, 0, Math.PI * 2);
             ctx.stroke();
           }
+        } else if (viewMode === "melted") {
+          // Melted / Ironed Simulation:
+          // Beads have softened under heat, fusing together with tight seams
+          const tilePad = 0.5;
+          const tileSize = beadCellPx - tilePad * 2;
+          const cornerR = 3.6;
+
+          // Main fused plastic body
+          ctx.fillStyle = hex;
+          ctx.beginPath();
+          if ((ctx as any).roundRect) {
+            (ctx as any).roundRect(x + tilePad, y + tilePad, tileSize, tileSize, cornerR);
+          } else {
+            ctx.rect(x + tilePad, y + tilePad, tileSize, tileSize);
+          }
+          ctx.fill();
+
+          // Soft iron thermal highlight across top (gloss finish)
+          ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
+          ctx.beginPath();
+          if ((ctx as any).roundRect) {
+            (ctx as any).roundRect(x + tilePad + 1, y + tilePad + 1, tileSize * 0.62, tileSize * 0.42, cornerR * 0.7);
+          } else {
+            ctx.rect(x + tilePad + 1, y + tilePad + 1, tileSize * 0.62, tileSize * 0.42);
+          }
+          ctx.fill();
+
+          // Fused seam line border
+          ctx.strokeStyle = "rgba(0, 0, 0, 0.18)";
+          ctx.lineWidth = 0.75;
+          ctx.beginPath();
+          if ((ctx as any).roundRect) {
+            (ctx as any).roundRect(x + tilePad, y + tilePad, tileSize, tileSize, cornerR);
+          } else {
+            ctx.rect(x + tilePad, y + tilePad, tileSize, tileSize);
+          }
+          ctx.stroke();
+
+          // Melted center pinhole
+          if (meltStyle === "standard") {
+            const meltedHoleR = 1.8;
+            ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, meltedHoleR, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.arc(cx, cy, meltedHoleR, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+
+          if (focusedColor && isMatch) {
+            ctx.strokeStyle = "#F59E0B";
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            if ((ctx as any).roundRect) {
+              (ctx as any).roundRect(x, y, beadCellPx, beadCellPx, cornerR + 1);
+            } else {
+              ctx.strokeRect(x, y, beadCellPx, beadCellPx);
+            }
+            ctx.stroke();
+          }
         } else {
           ctx.fillStyle = hex;
           ctx.fillRect(x, y, beadCellPx, beadCellPx);
@@ -887,8 +953,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             </div>
           )}
 
-          {/* VIEW MODES: Bead View (3D) vs Flat View */}
-          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1">
+          {/* VIEW MODES: Bead View (3D) vs Melted View (Ironed) vs Flat View */}
+          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1 gap-0.5">
             <button
               onClick={() => setViewMode("beads")}
               className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -896,9 +962,22 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   ? "bg-purple-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-white"
               }`}
+              title="Visualização 3D com miçangas abertas e furos (pré-ferro)"
             >
               <CircleDot className="w-3.5 h-3.5" />
               Bead View
+            </button>
+            <button
+              onClick={() => setViewMode("melted")}
+              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === "melted"
+                  ? "bg-amber-600 text-white shadow-sm shadow-amber-950/40"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              title="Simulação do resultado após passar o ferro quente (miçangas fundidas)"
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-300" />
+              Melted
             </button>
             <button
               onClick={() => setViewMode("flat")}
@@ -907,11 +986,42 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   ? "bg-purple-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-white"
               }`}
+              title="Visualização vetorial simples"
             >
               <Square className="w-3.5 h-3.5" />
-              Flat View
+              Flat
             </button>
           </div>
+
+          {/* Sub-selector for Melted Style when Melted is active */}
+          {viewMode === "melted" && (
+            <div className="flex items-center bg-amber-950/40 border border-amber-800/60 rounded-lg p-0.5 text-[10px] animate-in fade-in duration-150">
+              <button
+                type="button"
+                onClick={() => setMeltStyle("standard")}
+                className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                  meltStyle === "standard"
+                    ? "bg-amber-600 text-white font-bold shadow-sm"
+                    : "text-amber-300 hover:text-white"
+                }`}
+                title="Fusão média clássica com furinho reduzido"
+              >
+                Padrão
+              </button>
+              <button
+                type="button"
+                onClick={() => setMeltStyle("flat_melt")}
+                className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                  meltStyle === "flat_melt"
+                    ? "bg-amber-600 text-white font-bold shadow-sm"
+                    : "text-amber-300 hover:text-white"
+                }`}
+                title="Fusão total sem furo (Flat Melt)"
+              >
+                100% Fundido
+              </button>
+            </div>
+          )}
 
           {/* FEATURE TOGGLES */}
           <div className="flex items-center space-x-1.5 pl-2 border-l border-slate-800">
