@@ -253,6 +253,45 @@ def filter_largest_connected_component(mask: np.ndarray) -> np.ndarray:
     return clean_mask
 
 
+def eliminate_orphan_beads(matrix_hex: List[List[str]], max_orphan_size: int = 2) -> List[List[str]]:
+    """
+    Eliminates stray disconnected orphan beads (e.g. 1 or 2 beads floating detached from main body).
+    In fused bead art, isolated beads cannot fuse and represent compression noise or chart artifacts.
+    """
+    rows = len(matrix_hex)
+    cols = len(matrix_hex[0]) if rows > 0 else 0
+    if rows == 0 or cols == 0:
+        return matrix_hex
+
+    grid = np.zeros((rows, cols), dtype=np.uint8)
+    for r in range(rows):
+        for c in range(cols):
+            if matrix_hex[r][c] != "TRANSPARENT":
+                grid[r, c] = 1
+
+    total_beads = int(np.sum(grid))
+    if total_beads <= 8:
+        return matrix_hex
+
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(grid, connectivity=8)
+    if num_labels <= 2:
+        return matrix_hex
+
+    areas = stats[1:, cv2.CC_STAT_AREA]
+    max_area = int(np.max(areas))
+
+    cleaned = [row[:] for row in matrix_hex]
+    for lbl in range(1, num_labels):
+        area = stats[lbl, cv2.CC_STAT_AREA]
+        # Any disconnected island <= max_orphan_size when main piece is substantial
+        if area <= max_orphan_size and max_area >= 12 and area <= max_area * 0.15:
+            cleaned_indices = np.where(labels == lbl)
+            for r, c in zip(cleaned_indices[0], cleaned_indices[1]):
+                cleaned[r][c] = "TRANSPARENT"
+
+    return cleaned
+
+
 def prune_minority_beads(matrix_hex: List[List[str]], min_ratio: float = 0.008) -> List[List[str]]:
     """
     Prunes stray 1- or 2-bead color noise caused by reflections, shadows, or camera artifacts.
@@ -517,6 +556,15 @@ def process_pixel_art(
             for c in range(target_cols):
                 if canvas_mask[r, c] == 0:
                     matrix_hex[r][c] = "TRANSPARENT"
+
+        # Eliminate stray disconnected orphan beads (orphans cannot physically fuse)
+        matrix_hex = eliminate_orphan_beads(matrix_hex, max_orphan_size=2)
+
+        # Synchronize canvas_mask so final preview drops orphan pixels as well
+        for r in range(target_rows):
+            for c in range(target_cols):
+                if matrix_hex[r][c] == "TRANSPARENT":
+                    canvas_mask[r, c] = 0
 
     # Prune isolated minority beads (< 0.8% of total) to eliminate stray glare/reflection colors
     if prune_minority:
