@@ -1,7 +1,24 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Upload, Sliders, Layers, Sparkles, AlertCircle, Lock, Unlock, Tag, CircleDot, LayoutGrid, Settings2, Check } from "lucide-react";
+import {
+  Upload,
+  Sliders,
+  Layers,
+  Sparkles,
+  AlertCircle,
+  Lock,
+  Unlock,
+  Tag,
+  CircleDot,
+  LayoutGrid,
+  Settings2,
+  Check,
+  HelpCircle,
+  X,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
 import { PaletteManager } from "./PaletteManager";
 import { PhysicalParams, BrandInfo } from "@/types";
 
@@ -66,8 +83,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [lockAspect, setLockAspect] = useState<boolean>(true);
-  const [aspectRatio, setAspectRatio] = useState<number>(10 / 11.5);
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [aspectRatio, setAspectRatio] = useState<number>(1.0);
+  const [showAdvancedHardware, setShowAdvancedHardware] = useState<boolean>(false);
+  const [showSizingHelp, setShowSizingHelp] = useState<boolean>(false);
 
   useEffect(() => {
     if (selectedFile) {
@@ -104,20 +122,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleWidthChange = (val: number) => {
-    const w = Math.max(0.5, val);
+    const w = Math.min(120, Math.max(0.5, isNaN(val) ? 0.5 : val));
     if (lockAspect && aspectRatio > 0) {
       const h = parseFloat((w / aspectRatio).toFixed(1));
-      onParamsChange({ ...params, widthCm: w, heightCm: h });
+      onParamsChange({ ...params, widthCm: w, heightCm: Math.min(120, Math.max(0.5, h)) });
     } else {
       onParamsChange({ ...params, widthCm: w });
     }
   };
 
   const handleHeightChange = (val: number) => {
-    const h = Math.max(0.5, val);
+    const h = Math.min(120, Math.max(0.5, isNaN(val) ? 0.5 : val));
     if (lockAspect && aspectRatio > 0) {
       const w = parseFloat((h * aspectRatio).toFixed(1));
-      onParamsChange({ ...params, widthCm: w, heightCm: h });
+      onParamsChange({ ...params, widthCm: Math.min(120, Math.max(0.5, w)), heightCm: h });
     } else {
       onParamsChange({ ...params, heightCm: h });
     }
@@ -160,10 +178,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       return;
     }
     if (aspectRatio >= 1) {
+      // Landscape or square
       const w = boardCm;
       const h = parseFloat((boardCm / aspectRatio).toFixed(1));
       onParamsChange({ ...params, widthCm: w, heightCm: h });
     } else {
+      // Portrait
       const h = boardCm;
       const w = parseFloat((boardCm * aspectRatio).toFixed(1));
       onParamsChange({ ...params, widthCm: w, heightCm: h });
@@ -173,7 +193,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
-      setError("Please upload an image or bead template first.");
+      setError("Por favor, faça o upload de uma imagem ou modelo primeiro.");
       return;
     }
     setError(null);
@@ -184,6 +204,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const rows = Math.max(1, Math.round(params.heightCm / params.beadSizeCm));
   const pegboardCols = Math.ceil(params.widthCm / params.pegboardSizeCm);
   const pegboardRows = Math.ceil(params.heightCm / params.pegboardSizeCm);
+
+  // Guards / Intelligent Warnings
+  const currentRatio = params.widthCm / (params.heightCm || 1);
+  const isDistorted = !lockAspect && aspectRatio > 0 && Math.abs(currentRatio - aspectRatio) / aspectRatio > 0.08;
+  const isLowRes = cols < 12 || rows < 12;
 
   const activeBrandObj = brands.find((b) => b.id === selectedBrand);
 
@@ -238,51 +263,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Bead Brand Selector */}
-        <div className="space-y-2 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-purple-400" />
-              Bead Brand
-            </label>
-            <span className="text-[10px] text-slate-400">
-              {activeBrandObj ? `${activeBrandObj.count} Colors` : ""}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-1.5">
-            {brands.map((b) => {
-              const isSelected = b.id === selectedBrand;
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => onBrandChange(b.id)}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer ${
-                    isSelected
-                      ? "bg-purple-950 border-purple-500 text-purple-200 font-semibold shadow-sm"
-                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
-                  }`}
-                >
-                  <div className="truncate">{b.badge}</div>
-                  <div className="text-[9px] text-slate-500">{b.count} colors</div>
-                </button>
-              );
-            })}
-          </div>
-          {activeBrandObj && (
-            <p className="text-[11px] text-slate-400 italic">
-              {activeBrandObj.description}
-            </p>
-          )}
-        </div>
-
-        {/* Pegboard Hardware Presets */}
+        {/* ETAPA 2: Hardware Físico (Placa & Tamanho do Bead) */}
         <div className="space-y-2.5 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
               <LayoutGrid className="w-4 h-4 text-purple-400" />
-              <span>Placa Base (Pegboard)</span>
+              <span>2. Placa Base (Hardware)</span>
             </div>
             {isCustomHardware && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-800 text-amber-300 font-mono">
@@ -322,7 +308,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             })}
           </div>
 
-          {/* Neutral physical dimension clarification */}
+          {/* Nota dimensional técnica neutra */}
           {isMini50 && (
             <p className="text-[10px] text-slate-400 leading-relaxed bg-slate-950/60 p-2 rounded border border-slate-800/60">
               <span className="text-slate-300 font-medium">Área útil:</span> 13,0 × 13,0 cm (50×50 pinos). Bordas externas e travas somam ~14 cm na régua.
@@ -334,123 +320,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </p>
           )}
 
-          {/* Quick Sizing by Board Count */}
-          <div className="pt-2 border-t border-slate-800/80">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-medium text-slate-400">
-                Atalhos por Placas
-              </span>
-              <span className="text-[10px] text-purple-400 font-mono">
-                1 placa = {params.pegboardSizeCm}cm
-              </span>
-            </div>
-            <div className="grid grid-cols-4 gap-1.5">
-              <button
-                type="button"
-                onClick={fitToSingleBoard}
-                title="Enquadra proporcionalmente a imagem para caber dentro de 1 placa sem cortar"
-                className="py-1 px-1 rounded bg-slate-950 border border-slate-800 hover:border-purple-600 text-[10px] font-medium text-slate-300 hover:text-white transition-colors text-center cursor-pointer"
-              >
-                Ajustar 1
-              </button>
-              <button
-                type="button"
-                onClick={() => setBoardCount(1, 1)}
-                title={`1 placa cheia (${params.pegboardSizeCm} × ${params.pegboardSizeCm} cm)`}
-                className="py-1 px-1 rounded bg-slate-950 border border-slate-800 hover:border-purple-600 text-[10px] font-medium text-slate-300 hover:text-white transition-colors text-center cursor-pointer"
-              >
-                1×1 Placa
-              </button>
-              <button
-                type="button"
-                onClick={() => setBoardCount(2, 1)}
-                title={`2 placas lado a lado (${(params.pegboardSizeCm * 2).toFixed(1)} × ${params.pegboardSizeCm} cm)`}
-                className="py-1 px-1 rounded bg-slate-950 border border-slate-800 hover:border-purple-600 text-[10px] font-medium text-slate-300 hover:text-white transition-colors text-center cursor-pointer"
-              >
-                2×1
-              </button>
-              <button
-                type="button"
-                onClick={() => setBoardCount(2, 2)}
-                title={`4 placas em 2×2 (${(params.pegboardSizeCm * 2).toFixed(1)} × ${(params.pegboardSizeCm * 2).toFixed(1)} cm)`}
-                className="py-1 px-1 rounded bg-slate-950 border border-slate-800 hover:border-purple-600 text-[10px] font-medium text-slate-300 hover:text-white transition-colors text-center cursor-pointer"
-              >
-                2×2
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Physical Dimensions & Custom Tuning */}
-        <div className="space-y-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
-              <Sliders className="w-4 h-4 text-purple-400" />
-              <span>Dimensões Finais (cm)</span>
-            </div>
-
-            {/* Aspect Ratio Lock Toggle */}
-            <button
-              type="button"
-              onClick={() => setLockAspect(!lockAspect)}
-              className={`px-2 py-1 rounded text-[11px] font-medium border flex items-center gap-1 transition-colors cursor-pointer ${
-                lockAspect
-                  ? "bg-purple-950/80 border-purple-700 text-purple-200"
-                  : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
-              }`}
-              title={lockAspect ? "Aspect Ratio Locked (Proportional)" : "Aspect Ratio Unlocked"}
-            >
-              {lockAspect ? <Lock className="w-3 h-3 text-purple-400" /> : <Unlock className="w-3 h-3" />}
-              <span>{lockAspect ? "Proportional" : "Free"}</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                Largura Final (cm)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0.5"
-                value={params.widthCm}
-                onChange={(e) => handleWidthChange(parseFloat(e.target.value) || 0)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500"
-              />
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                Altura Final (cm)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0.5"
-                value={params.heightCm}
-                onChange={(e) => handleHeightChange(parseFloat(e.target.value) || 0)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500"
-              />
-            </div>
-          </div>
-
-          {/* Advanced / Custom Hardware Toggle */}
+          {/* Configurações Avançadas de Hardware (Colapsável) */}
           <div className="pt-1">
             <button
               type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
+              onClick={() => setShowAdvancedHardware(!showAdvancedHardware)}
               className="flex items-center justify-between w-full text-[11px] text-slate-400 hover:text-slate-200 transition-colors py-0.5 cursor-pointer"
             >
               <span className="flex items-center gap-1.5">
                 <Settings2 className="w-3.5 h-3.5 text-slate-500" />
-                Configurações Avançadas
+                Ajustar Diâmetro ou Placa Livre
               </span>
               <span className="text-[10px] text-slate-500 font-mono">
-                {showAdvanced ? "▲ Fechar" : "▼ Ajustar"}
+                {showAdvancedHardware ? "▲ Fechar" : "▼ Personalizar"}
               </span>
             </button>
 
-            {showAdvanced && (
+            {showAdvancedHardware && (
               <div className="mt-2 p-2.5 bg-slate-950/70 rounded-lg border border-slate-800/80 space-y-2">
                 <div>
                   <div className="flex justify-between items-center mb-1">
@@ -465,10 +351,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     type="number"
                     step="0.01"
                     min="0.1"
+                    max="1.5"
                     value={params.beadSizeCm}
-                    onChange={(e) => handleInputChange("beadSizeCm", parseFloat(e.target.value) || 0.26)}
+                    onChange={(e) => handleInputChange("beadSizeCm", Math.max(0.1, parseFloat(e.target.value) || 0.26))}
                     className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500"
                   />
+                  <span className="text-[9px] text-slate-500">
+                    Mini: 0.26 cm (2.6mm) | Midi: 0.50 cm (5.0mm)
+                  </span>
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-1">
@@ -483,81 +373,318 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     type="number"
                     step="0.5"
                     min="1.0"
+                    max="100.0"
                     value={params.pegboardSizeCm}
-                    onChange={(e) => handleInputChange("pegboardSizeCm", parseFloat(e.target.value) || 13.0)}
+                    onChange={(e) => handleInputChange("pegboardSizeCm", Math.max(1.0, parseFloat(e.target.value) || 13.0))}
                     className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500"
                   />
                 </div>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Background Mode: Cutout (Silhouette) vs Solid (Plate) */}
-          <div className="pt-1">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[11px] font-medium text-slate-400">
-                Background Mode
-              </label>
-              <span className="text-[10px] text-slate-500 font-mono">
-                {params.backgroundMode === "cutout" ? "Silhouette" : "Full Plate"}
+        {/* ETAPA 3: Tamanho do Projeto & Enquadramento */}
+        <div className="space-y-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
+              <Sliders className="w-4 h-4 text-purple-400" />
+              <span>3. Tamanho do Projeto</span>
+            </div>
+
+            {/* Botão de Ajuda dos Tamanhos */}
+            <button
+              type="button"
+              onClick={() => setShowSizingHelp(!showSizingHelp)}
+              className="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer"
+              title="Explicação sobre cada modo de enquadramento"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Como escolher?</span>
+            </button>
+          </div>
+
+          {/* Modal / Card Explicativo de Enquadramento */}
+          {showSizingHelp && (
+            <div className="p-3 bg-slate-950 rounded-lg border border-purple-800/80 space-y-2 text-[11px] text-slate-300 relative">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 font-semibold text-slate-100">
+                <span>Guia de Tamanhos e Placas</span>
+                <button
+                  type="button"
+                  onClick={() => setShowSizingHelp(false)}
+                  className="text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <ul className="space-y-1.5 leading-relaxed text-slate-300">
+                <li>
+                  <strong className="text-purple-300">Enquadrar 1 Placa:</strong> Faz a figura caber dentro de 1 placa mantendo a proporção original sem esticar (ideal para bonecos e sprites).
+                </li>
+                <li>
+                  <strong className="text-purple-300">1 Placa Cheia:</strong> Preenche o quadrado inteiro ({Math.round(params.pegboardSizeCm / params.beadSizeCm)}×{Math.round(params.pegboardSizeCm / params.beadSizeCm)} pinos). Ideal para porta-copos ou quadros.
+                </li>
+                <li>
+                  <strong className="text-purple-300">2 Placas (2×1):</strong> Encaixa duas placas na horizontal para desenhos compridos (espadas, letreiros).
+                </li>
+                <li>
+                  <strong className="text-purple-300">4 Placas (2×2):</strong> Junta 4 placas formando um grande painel quadrado para projetos grandes.
+                </li>
+                <li>
+                  <strong className="text-purple-300">Medidas Livres:</strong> Digite os centímetros que desejar nos campos abaixo.
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {/* Atalhos Rápidos por Placas */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-slate-400">
+                Atalhos Frequentes
+              </span>
+              <span className="text-[10px] text-purple-400 font-mono">
+                1 placa = {params.pegboardSizeCm}cm
               </span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => handleInputChange("backgroundMode", "cutout")}
-                className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  params.backgroundMode === "cutout"
-                    ? "bg-purple-950 border-purple-600 text-purple-200 font-semibold shadow-sm"
-                    : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
-                }`}
-                title="Transparent outer background: generates only character silhouette beads"
+                onClick={fitToSingleBoard}
+                className="py-1.5 px-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-purple-600 text-left transition-colors cursor-pointer group"
               >
-                <span>✂ Cutout</span>
+                <div className="text-xs font-semibold text-slate-200 group-hover:text-purple-300">
+                  Enquadrar 1 Placa
+                </div>
+                <div className="text-[9px] text-slate-400">
+                  Máximo sem distorcer
+                </div>
               </button>
+
               <button
                 type="button"
-                onClick={() => handleInputChange("backgroundMode", "solid")}
-                className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  params.backgroundMode === "solid"
-                    ? "bg-purple-950 border-purple-600 text-purple-200 font-semibold shadow-sm"
-                    : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
-                }`}
-                title="Solid background plate: fills entire rectangular pegboard with beads (coasters, frames)"
+                onClick={() => setBoardCount(1, 1)}
+                className="py-1.5 px-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-purple-600 text-left transition-colors cursor-pointer group"
               >
-                <span>▦ Solid Plate</span>
+                <div className="text-xs font-semibold text-slate-200 group-hover:text-purple-300">
+                  1 Placa Cheia
+                </div>
+                <div className="text-[9px] text-slate-400">
+                  {Math.round(params.pegboardSizeCm / params.beadSizeCm)}×{Math.round(params.pegboardSizeCm / params.beadSizeCm)} pinos
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBoardCount(2, 1)}
+                className="py-1.5 px-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-purple-600 text-left transition-colors cursor-pointer group"
+              >
+                <div className="text-xs font-semibold text-slate-200 group-hover:text-purple-300">
+                  2 Placas (2×1)
+                </div>
+                <div className="text-[9px] text-slate-400">
+                  Horizontal ({(params.pegboardSizeCm * 2).toFixed(1)}×{params.pegboardSizeCm}cm)
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBoardCount(2, 2)}
+                className="py-1.5 px-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-purple-600 text-left transition-colors cursor-pointer group"
+              >
+                <div className="text-xs font-semibold text-slate-200 group-hover:text-purple-300">
+                  4 Placas (2×2)
+                </div>
+                <div className="text-[9px] text-slate-400">
+                  Painel Grande ({(params.pegboardSizeCm * 2).toFixed(1)}cm²)
+                </div>
               </button>
             </div>
           </div>
 
-          {/* Result Specs Summary */}
-          <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
+          {/* Dimensões Manuais Livres com Bloqueio de Proporção */}
+          <div className="pt-2 border-t border-slate-800/80 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <Layers className="w-3 h-3 text-slate-500" />
-                Bead Grid:
+              <span className="text-[11px] font-medium text-slate-400">
+                Dimensões Personalizadas
+              </span>
+
+              {/* Aspect Ratio Lock Toggle */}
+              <button
+                type="button"
+                onClick={() => setLockAspect(!lockAspect)}
+                className={`px-2 py-0.5 rounded text-[10px] font-medium border flex items-center gap-1 transition-colors cursor-pointer ${
+                  lockAspect
+                    ? "bg-purple-950/80 border-purple-700 text-purple-200"
+                    : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                }`}
+                title={lockAspect ? "Proporção Travada: alterar um lado ajusta o outro automaticamente" : "Proporção Livre: permite esticar ou achatar a imagem livremente"}
+              >
+                {lockAspect ? <Lock className="w-3 h-3 text-purple-400" /> : <Unlock className="w-3 h-3" />}
+                <span>{lockAspect ? "Proporcional" : "Livre"}</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[10px] font-medium text-slate-400 block mb-1">
+                  Largura (cm)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.5"
+                  max="120"
+                  value={params.widthCm}
+                  onChange={(e) => handleWidthChange(parseFloat(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-slate-400 block mb-1">
+                  Altura (cm)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.5"
+                  max="120"
+                  value={params.heightCm}
+                  onChange={(e) => handleHeightChange(parseFloat(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* Avisos Inteligentes de Segurança (Guards) */}
+            {isDistorted && (
+              <div className="p-2 bg-amber-950/40 border border-amber-800/60 rounded text-[10px] text-amber-300 flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
+                <span>
+                  <strong>Atenção:</strong> Proporção livre ativa. A imagem original será esticada ou achatada nessas medidas.
+                </span>
+              </div>
+            )}
+
+            {isLowRes && (
+              <div className="p-2 bg-blue-950/40 border border-blue-800/60 rounded text-[10px] text-blue-300 flex items-start gap-1.5">
+                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-blue-400" />
+                <span>
+                  Resolução muito compacta ({cols}×{rows} pinos). Rostos e detalhes finos podem perder nitidez.
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ETAPA 4: Cores & Catálogo de Marcas */}
+        <div className="space-y-2 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5 text-purple-400" />
+              4. Marca das Contas (Catálogo)
+            </label>
+            <span className="text-[10px] text-slate-400 font-mono">
+              {activeBrandObj ? `${activeBrandObj.count} Cores` : ""}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5">
+            {brands.map((b) => {
+              const isSelected = b.id === selectedBrand;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => onBrandChange(b.id)}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-purple-950 border-purple-500 text-purple-200 font-semibold shadow-sm"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="truncate">{b.badge}</div>
+                  <div className="text-[9px] text-slate-500">{b.count} cores</div>
+                </button>
+              );
+            })}
+          </div>
+          {activeBrandObj && (
+            <p className="text-[11px] text-slate-400 italic">
+              {activeBrandObj.description}
+            </p>
+          )}
+
+          {/* Gerenciador de Paleta Específica da Marca */}
+          <div className="pt-2 border-t border-slate-800/80">
+            <PaletteManager
+              selectedBrand={selectedBrand}
+              brands={brands}
+              palette={palette}
+              onChange={onPaletteChange}
+              selectedFile={selectedFile}
+            />
+          </div>
+        </div>
+
+        {/* ETAPA 5: Modo de Montagem (Silhueta vs Placa Sólida) */}
+        <div className="space-y-2 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-semibold text-slate-200">
+              5. Modo de Fundo
+            </label>
+            <span className="text-[10px] text-slate-400 font-mono">
+              {params.backgroundMode === "cutout" ? "Silhueta Vazada" : "Placa Inteira"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleInputChange("backgroundMode", "cutout")}
+              className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                params.backgroundMode === "cutout"
+                  ? "bg-purple-950 border-purple-600 text-purple-200 font-semibold shadow-sm"
+                  : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+              }`}
+              title="Gera apenas o personagem/figura com o fundo transparente vazado (chaveiros, figuras soltas)"
+            >
+              <span>✂ Silhueta</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleInputChange("backgroundMode", "solid")}
+              className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                params.backgroundMode === "solid"
+                  ? "bg-purple-950 border-purple-600 text-purple-200 font-semibold shadow-sm"
+                  : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+              }`}
+              title="Preenche todo o retângulo da placa com beads de fundo (porta-copos, quadros)"
+            >
+              <span>▦ Placa Sólida</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ETAPA 6: Resumo Técnico & Botão de Geração */}
+        <div className="space-y-3 bg-slate-900/80 p-3.5 rounded-xl border border-purple-900/40 shadow-inner">
+          <div className="text-[11px] text-slate-300 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1 text-slate-400">
+                <Layers className="w-3.5 h-3.5 text-slate-500" />
+                Total de Beads (Grade):
               </span>
               <span className="font-mono text-purple-300 font-semibold">
-                {cols} × {rows} ({cols * rows} beads)
+                {cols} × {rows} ({cols * rows} contas)
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span>Pegboards Needed:</span>
+              <span className="text-slate-400">Placas Necessárias:</span>
               <span className="font-mono text-rose-400 font-semibold">
-                {pegboardCols} × {pegboardRows} ({pegboardCols * pegboardRows} boards)
+                {pegboardCols} × {pegboardRows} ({pegboardCols * pegboardRows} {pegboardCols * pegboardRows === 1 ? "placa" : "placas"})
               </span>
             </div>
           </div>
         </div>
-
-        {/* Palette Manager */}
-        <PaletteManager
-          selectedBrand={selectedBrand}
-          brands={brands}
-          palette={palette}
-          onChange={onPaletteChange}
-          selectedFile={selectedFile}
-        />
 
         {/* Error Feedback */}
         {error && (
