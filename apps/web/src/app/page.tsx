@@ -15,10 +15,10 @@ const DEFAULT_BRANDS: BrandInfo[] = [
 
 export default function Home() {
   const [params, setParams] = useState<PhysicalParams>({
-    widthCm: 14.0,
-    heightCm: 19.0,
-    beadSizeCm: 0.5,       // 5mm Standard Midi beads
-    pegboardSizeCm: 14.5,  // 29x29 Standard Midi Pegboard (14.5cm)
+    widthCm: 13.0,
+    heightCm: 13.0,
+    beadSizeCm: 0.26,      // 2.6mm Mini beads (50x50 pins)
+    pegboardSizeCm: 13.0,  // 50x50 Mini Pegboard (13.0cm)
     cropX: 0.0,
     cropY: 0.0,
     cropW: 1.0,

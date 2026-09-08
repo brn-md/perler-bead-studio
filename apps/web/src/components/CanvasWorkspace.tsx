@@ -698,7 +698,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
     // 7. Pegboard Modular Lines (Disabled in Melted View)
     if (showPegboard && params.pegboardSizeCm > 0 && viewMode !== "melted") {
-      const beadsPerPegboard = params.pegboardSizeCm / params.beadSizeCm;
+      const beadsPerPegboard = Math.round(params.pegboardSizeCm / params.beadSizeCm);
       const pegboardIntervalPx = beadsPerPegboard * beadCellPx;
 
       ctx.strokeStyle = "#DC2626";

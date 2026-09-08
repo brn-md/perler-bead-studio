@@ -1,9 +1,40 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Upload, Sliders, Layers, Sparkles, AlertCircle, Lock, Unlock, Tag, CircleDot } from "lucide-react";
+import { Upload, Sliders, Layers, Sparkles, AlertCircle, Lock, Unlock, Tag, CircleDot, LayoutGrid, Settings2, Check } from "lucide-react";
 import { PaletteManager } from "./PaletteManager";
 import { PhysicalParams, BrandInfo } from "@/types";
+
+interface PegboardPreset {
+  id: string;
+  name: string;
+  brandHint: string;
+  beadSizeCm: number;
+  pegboardSizeCm: number;
+  pinsText: string;
+  sizeText: string;
+}
+
+const PEGBOARD_PRESETS: PegboardPreset[] = [
+  {
+    id: "mini_50",
+    name: "Mini 50×50",
+    brandHint: "Pêssego / Artkal Mini",
+    beadSizeCm: 0.26,
+    pegboardSizeCm: 13.0,
+    pinsText: "50×50 pinos (2.6mm)",
+    sizeText: "13.0 × 13.0 cm",
+  },
+  {
+    id: "midi_29",
+    name: "Midi 29×29",
+    brandHint: "Perler / Hama Standard",
+    beadSizeCm: 0.5,
+    pegboardSizeCm: 14.5,
+    pinsText: "29×29 pinos (5.0mm)",
+    sizeText: "14.5 × 14.5 cm",
+  },
+];
 
 interface SidebarProps {
   params: PhysicalParams;
@@ -36,6 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [lockAspect, setLockAspect] = useState<boolean>(true);
   const [aspectRatio, setAspectRatio] = useState<number>(10 / 11.5);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
 
   useEffect(() => {
     if (selectedFile) {
@@ -98,11 +130,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
     });
   };
 
-  const applyHardwarePreset = (beadCm: number) => {
+  const isMini50 = Math.abs(params.beadSizeCm - 0.26) < 0.01 && Math.abs(params.pegboardSizeCm - 13.0) < 0.1;
+  const isMidi29 = Math.abs(params.beadSizeCm - 0.5) < 0.01 && Math.abs(params.pegboardSizeCm - 14.5) < 0.1;
+  const isCustomHardware = !isMini50 && !isMidi29;
+
+  const applyBoardPreset = (preset: PegboardPreset) => {
     onParamsChange({
       ...params,
-      beadSizeCm: beadCm,
+      beadSizeCm: preset.beadSizeCm,
+      pegboardSizeCm: preset.pegboardSizeCm,
     });
+  };
+
+  const setBoardCount = (colsCount: number, rowsCount: number) => {
+    const boardCm = params.pegboardSizeCm || 13.0;
+    const w = parseFloat((colsCount * boardCm).toFixed(1));
+    const h = parseFloat((rowsCount * boardCm).toFixed(1));
+    onParamsChange({
+      ...params,
+      widthCm: w,
+      heightCm: h,
+    });
+  };
+
+  const fitToSingleBoard = () => {
+    const boardCm = params.pegboardSizeCm || 13.0;
+    if (!aspectRatio || aspectRatio <= 0) {
+      setBoardCount(1, 1);
+      return;
+    }
+    if (aspectRatio >= 1) {
+      const w = boardCm;
+      const h = parseFloat((boardCm / aspectRatio).toFixed(1));
+      onParamsChange({ ...params, widthCm: w, heightCm: h });
+    } else {
+      const h = boardCm;
+      const w = parseFloat((boardCm * aspectRatio).toFixed(1));
+      onParamsChange({ ...params, widthCm: w, heightCm: h });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -212,12 +277,104 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Physical Dimensions & Proportional Scaling */}
+        {/* Pegboard Hardware Presets */}
+        <div className="space-y-2.5 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
+              <LayoutGrid className="w-4 h-4 text-purple-400" />
+              <span>Placa Base (Pegboard)</span>
+            </div>
+            {isCustomHardware && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-800 text-amber-300 font-mono">
+                Personalizado
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {PEGBOARD_PRESETS.map((p) => {
+              const active = p.id === "mini_50" ? isMini50 : isMidi29;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => applyBoardPreset(p)}
+                  className={`p-2.5 rounded-lg text-left border transition-all cursor-pointer relative flex flex-col justify-between ${
+                    active
+                      ? "bg-purple-950/70 border-purple-500 shadow-sm shadow-purple-500/20 text-white"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold font-mono tracking-tight text-slate-100 flex items-center gap-1">
+                      {p.name}
+                    </span>
+                    {active && <Check className="w-3.5 h-3.5 text-purple-400" />}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-sans leading-tight">
+                    {p.brandHint}
+                  </div>
+                  <div className="text-[9px] font-mono text-purple-300/80 mt-1.5">
+                    {p.pinsText}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick Sizing by Board Count */}
+          <div className="pt-2 border-t border-slate-800/80">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-medium text-slate-400">
+                Atalhos por Placas
+              </span>
+              <span className="text-[10px] text-purple-400 font-mono">
+                1 placa = {params.pegboardSizeCm}cm
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              <button
+                type="button"
+                onClick={fitToSingleBoard}
+                title="Enquadra proporcionalmente a imagem para caber dentro de 1 placa sem cortar"
+                className="py-1 px-1 rounded bg-slate-950 border border-slate-800 hover:border-purple-600 text-[10px] font-medium text-slate-300 hover:text-white transition-colors text-center cursor-pointer"
+              >
+                Ajustar 1
+              </button>
+              <button
+                type="button"
+                onClick={() => setBoardCount(1, 1)}
+                title={`1 placa cheia (${params.pegboardSizeCm} × ${params.pegboardSizeCm} cm)`}
+                className="py-1 px-1 rounded bg-slate-950 border border-slate-800 hover:border-purple-600 text-[10px] font-medium text-slate-300 hover:text-white transition-colors text-center cursor-pointer"
+              >
+                1×1 Placa
+              </button>
+              <button
+                type="button"
+                onClick={() => setBoardCount(2, 1)}
+                title={`2 placas lado a lado (${(params.pegboardSizeCm * 2).toFixed(1)} × ${params.pegboardSizeCm} cm)`}
+                className="py-1 px-1 rounded bg-slate-950 border border-slate-800 hover:border-purple-600 text-[10px] font-medium text-slate-300 hover:text-white transition-colors text-center cursor-pointer"
+              >
+                2×1
+              </button>
+              <button
+                type="button"
+                onClick={() => setBoardCount(2, 2)}
+                title={`4 placas em 2×2 (${(params.pegboardSizeCm * 2).toFixed(1)} × ${(params.pegboardSizeCm * 2).toFixed(1)} cm)`}
+                className="py-1 px-1 rounded bg-slate-950 border border-slate-800 hover:border-purple-600 text-[10px] font-medium text-slate-300 hover:text-white transition-colors text-center cursor-pointer"
+              >
+                2×2
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Physical Dimensions & Custom Tuning */}
         <div className="space-y-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 text-sm font-semibold text-slate-200">
               <Sliders className="w-4 h-4 text-purple-400" />
-              <span>Dimensions & Scaling</span>
+              <span>Dimensões Finais (cm)</span>
             </div>
 
             {/* Aspect Ratio Lock Toggle */}
@@ -239,7 +396,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="grid grid-cols-2 gap-2.5">
             <div>
               <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                Final Width (cm)
+                Largura Final (cm)
               </label>
               <input
                 type="number"
@@ -252,7 +409,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div>
               <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                Final Height (cm)
+                Altura Final (cm)
               </label>
               <input
                 type="number"
@@ -265,49 +422,62 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          {/* Bead Size Presets */}
+          {/* Advanced / Custom Hardware Toggle */}
           <div className="pt-1">
-            <label className="text-[11px] font-medium text-slate-400 block mb-1.5">
-              Bead Hardware Size
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => applyHardwarePreset(0.5)}
-                className={`py-1 px-2 rounded text-xs font-mono border text-center transition-all cursor-pointer ${
-                  params.beadSizeCm === 0.5
-                    ? "bg-purple-950 border-purple-600 text-purple-200 font-semibold"
-                    : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
-                }`}
-              >
-                Midi (5.0 mm - Standard)
-              </button>
-              <button
-                type="button"
-                onClick={() => applyHardwarePreset(0.26)}
-                className={`py-1 px-2 rounded text-xs font-mono border text-center transition-all cursor-pointer ${
-                  params.beadSizeCm === 0.26
-                    ? "bg-purple-950 border-purple-600 text-purple-200 font-semibold"
-                    : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
-                }`}
-              >
-                Mini (2.6 mm - Detailed)
-              </button>
-            </div>
-          </div>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center justify-between w-full text-[11px] text-slate-400 hover:text-slate-200 transition-colors py-0.5 cursor-pointer"
+            >
+              <span className="flex items-center gap-1.5">
+                <Settings2 className="w-3.5 h-3.5 text-slate-500" />
+                Configurações Avançadas
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono">
+                {showAdvanced ? "▲ Fechar" : "▼ Ajustar"}
+              </span>
+            </button>
 
-          <div className="pt-1">
-            <label className="text-[11px] font-medium text-slate-400 block mb-1">
-              Pegboard Size (cm)
-            </label>
-            <input
-              type="number"
-              step="0.5"
-              min="1.0"
-              value={params.pegboardSizeCm}
-              onChange={(e) => handleInputChange("pegboardSizeCm", parseFloat(e.target.value) || 0)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500"
-            />
+            {showAdvanced && (
+              <div className="mt-2 p-2.5 bg-slate-950/70 rounded-lg border border-slate-800/80 space-y-2">
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[10px] font-medium text-slate-400">
+                      Tamanho do Bead (cm)
+                    </label>
+                    <span className="text-[9px] font-mono text-slate-500">
+                      {(params.beadSizeCm * 10).toFixed(1)} mm
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.1"
+                    value={params.beadSizeCm}
+                    onChange={(e) => handleInputChange("beadSizeCm", parseFloat(e.target.value) || 0.26)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[10px] font-medium text-slate-400">
+                      Tamanho da Placa (cm)
+                    </label>
+                    <span className="text-[9px] font-mono text-slate-500">
+                      {Math.round(params.pegboardSizeCm / params.beadSizeCm)} pinos
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="1.0"
+                    value={params.pegboardSizeCm}
+                    onChange={(e) => handleInputChange("pegboardSizeCm", parseFloat(e.target.value) || 13.0)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Background Mode: Cutout (Silhouette) vs Solid (Plate) */}
