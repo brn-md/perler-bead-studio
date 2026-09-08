@@ -67,3 +67,8 @@ temp/
 backend/*.png
 backend/test_*.py
 backend/test_*.png*.pdf
+test_*.png
+tests/scratch/
+tests/inspection/
+*.lnk
+
