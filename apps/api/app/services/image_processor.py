@@ -81,7 +81,8 @@ def process_pixel_art(
     grid_mode: str = "auto",
     bg_tolerance: float = 30.0,
     flat_colors: bool = False,
-    custom_bg_hex: Optional[str] = None
+    custom_bg_hex: Optional[str] = None,
+    decode_cell_codes: bool = False
 ) -> Dict[str, Any]:
     nparr = np.frombuffer(image_bytes, np.uint8)
     img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -105,19 +106,20 @@ def process_pixel_art(
     target_cols = max(1, int(round(width_cm / bead_size_cm)))
     target_rows = max(1, int(round(height_cm / bead_size_cm)))
 
-    # 1. Grid / Chart detection (auto, force or off)
+    # 1. Grid / Chart detection
     grid_result = None
-    if grid_mode != "off":
-        force = (grid_mode == "force")
-        # First check if the image is an annotated fuse bead pattern chart (with rulers & cell text codes)
+    if decode_cell_codes:
+        # User explicitly enabled chart mode for prints with rulers & cell letter codes (C3, R15)
         grid_result = detect_annotated_chart(img_bgr, custom_bg_hex=custom_bg_hex, bg_tolerance=bg_tolerance)
-        if grid_result is None:
-            grid_result = detect_and_sample_grid_template(
-                img_bgr,
-                force_grid=force,
-                bg_tolerance=bg_tolerance,
-                custom_bg_hex=custom_bg_hex
-            )
+
+    if grid_result is None and grid_mode != "off":
+        force = (grid_mode == "force")
+        grid_result = detect_and_sample_grid_template(
+            img_bgr,
+            force_grid=force,
+            bg_tolerance=bg_tolerance,
+            custom_bg_hex=custom_bg_hex
+        )
 
     if grid_result is not None:
         craft_rgb, craft_mask = grid_result

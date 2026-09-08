@@ -134,7 +134,8 @@ async def process_image_endpoint(
     grid_mode: Optional[str] = Form("auto", description="Grid detector mode: 'auto', 'force', or 'off'"),
     bg_tolerance: Optional[float] = Form(30.0, description="Perimeter background Delta-E color tolerance (0-100)"),
     flat_colors: Optional[bool] = Form(False, description="Flatten noise and secondary shading into pure base colors"),
-    custom_bg_hex: Optional[str] = Form(None, description="Optional custom background color hex (e.g. #FFFFFF or #F3ACD4)")
+    custom_bg_hex: Optional[str] = Form(None, description="Optional custom background color hex (e.g. #FFFFFF or #F3ACD4)"),
+    decode_cell_codes: Optional[bool] = Form(False, description="Explicitly decode pattern charts with cell letters/codes and rulers")
 ):
     if width_cm <= 0 or height_cm <= 0 or bead_size_cm <= 0:
         raise HTTPException(
@@ -174,7 +175,8 @@ async def process_image_endpoint(
             grid_mode=grid_mode or "auto",
             bg_tolerance=float(bg_tolerance) if bg_tolerance is not None else 30.0,
             flat_colors=bool(flat_colors),
-            custom_bg_hex=custom_bg_hex.strip() if custom_bg_hex and custom_bg_hex.strip() else None
+            custom_bg_hex=custom_bg_hex.strip() if custom_bg_hex and custom_bg_hex.strip() else None,
+            decode_cell_codes=bool(decode_cell_codes)
         )
         return result
     except ValueError as ve:

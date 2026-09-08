@@ -43,6 +43,7 @@ export interface PhysicalParams {
   bgTolerance?: number;
   flatColors?: boolean;
   customBgHex?: string;
+  decodeCellCodes?: boolean;
 }
 
 export interface BeadColor {

@@ -698,7 +698,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex-1 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   Filtros Avançados & Correção
-                  {(params.gridMode === "force" || params.flatColors || (params.bgTolerance && params.bgTolerance !== 30)) && (
+                  {(params.gridMode === "force" || params.flatColors || params.decodeCellCodes || params.customBgHex || (params.bgTolerance && params.bgTolerance !== 30)) && (
                     <span className="px-1.5 py-0.2 text-[9px] bg-pink-500/20 text-pink-300 rounded-full border border-pink-500/30">
                       Ativo
                     </span>
@@ -760,13 +760,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onParamsChange({
                         ...params,
                         gridMode: "force",
+                        decodeCellCodes: true,
                         bgTolerance: 30,
                         flatColors: false,
                         backgroundMode: "cutout",
                       });
                     }}
                     className={`w-full py-2 px-2.5 rounded-lg text-xs font-semibold border text-left transition-all cursor-pointer ${
-                      params.gridMode === "force" && !params.flatColors
+                      params.decodeCellCodes
                         ? "bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm"
                         : "bg-slate-950/80 border-slate-800 text-slate-300 hover:border-purple-900 hover:text-white"
                     }`}
@@ -774,9 +775,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
                         <FileText className="w-3 h-3 text-purple-400" />
-                        <span>📋 Ler Gabarito Técnico / Print</span>
+                        <span>📋 Ler Gabarito Técnico / Print com Letras</span>
                       </span>
-                      {params.gridMode === "force" && !params.flatColors && (
+                      {params.decodeCellCodes && (
                         <Check className="w-3.5 h-3.5 text-purple-400" />
                       )}
                     </div>
@@ -785,6 +786,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </p>
                   </button>
                 </div>
+              </div>
+
+              {/* Checkbox Específico: Imagem tem letrinhas no meio */}
+              <div className="space-y-1.5 pt-1 border-t border-slate-800/60">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-purple-400" />
+                    Decodificador de Gabaritos
+                  </label>
+                  {params.decodeCellCodes && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-700 font-semibold">
+                      Ativo
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleInputChange("decodeCellCodes", !params.decodeCellCodes)}
+                  className={`w-full py-2 px-2.5 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors cursor-pointer ${
+                    params.decodeCellCodes
+                      ? "bg-purple-950/80 border-purple-600 text-purple-200"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <div className="text-left pr-2">
+                    <span className="block font-semibold text-slate-200">A imagem tem letras/códigos no meio (ex: C3, R15)</span>
+                    <span className="block text-[9.5px] text-slate-400 mt-0.5 leading-tight">
+                      Filtra letras pretas dentro das células e remove réguas numeradas de prints técnicos.
+                    </span>
+                  </div>
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                    params.decodeCellCodes ? "bg-purple-600 border-purple-400 text-white" : "border-slate-700 bg-slate-900"
+                  }`}>
+                    {params.decodeCellCodes && <Check className="w-3 h-3" />}
+                  </div>
+                </button>
               </div>
 
               {/* Controle 1: Detector de Grade */}
@@ -965,7 +1002,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
 
               {/* Botão Reset */}
-              {(params.gridMode !== "auto" || params.flatColors || params.bgTolerance !== 30 || params.customBgHex) && (
+              {(params.gridMode !== "auto" || params.flatColors || params.bgTolerance !== 30 || params.customBgHex || params.decodeCellCodes) && (
                 <div className="pt-1 flex justify-end">
                   <button
                     type="button"
@@ -976,6 +1013,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         bgTolerance: 30,
                         flatColors: false,
                         customBgHex: undefined,
+                        decodeCellCodes: false,
                       });
                     }}
                     className="text-[10px] text-slate-400 hover:text-slate-200 underline cursor-pointer"
