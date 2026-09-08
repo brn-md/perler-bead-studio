@@ -46,6 +46,9 @@ export interface PhysicalParams {
   decodeCellCodes?: boolean;
   sampleCornersBg?: boolean;
   detectRedDividers?: boolean;
+  inputMode?: "auto" | "craft_photo" | "grid_chart" | "pixel_art";
+  dropSatellites?: boolean;
+  pruneMinority?: boolean;
 }
 
 export interface BeadColor {

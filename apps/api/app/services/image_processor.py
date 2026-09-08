@@ -9,6 +9,7 @@ Universal Bead Art Scaling & Digitizing Engine:
 """
 
 import io
+import time
 import base64
 from typing import List, Optional, Dict, Any, Tuple
 
@@ -23,6 +24,7 @@ from app.core.grid_detector import (
     detect_annotated_chart,
     auto_strip_letterbox
 )
+from app.core.action_logger import log_step, log_error
 
 # Build a global fallback lookup of all colors across all brands
 GLOBAL_COLOR_LOOKUP: Dict[str, Dict[str, str]] = {}
@@ -200,7 +202,88 @@ def extract_pixel_art_sprite(
 
     return None
 
-def extract_photo_craft(image_bytes: bytes, img_bgr: np.ndarray):
+def suppress_bead_holes_and_glare(img_rgb: np.ndarray) -> np.ndarray:
+    """
+    Suppresses the dark annular central holes of physical perler beads
+    and specular glare reflections on the plastic surface before downsampling.
+    """
+    h, w = img_rgb.shape[:2]
+    k_size = max(3, min(7, int(min(h, w) * 0.02) | 1))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_size, k_size))
+    closed = cv2.morphologyEx(img_rgb, cv2.MORPH_CLOSE, kernel)
+    smoothed = cv2.bilateralFilter(closed, d=7, sigmaColor=45, sigmaSpace=45)
+    return smoothed
+
+
+def filter_largest_connected_component(mask: np.ndarray) -> np.ndarray:
+    """
+    Isolates the main bead piece and discards detached satellite objects
+    (e.g., coins, scissors, hands, background fragments).
+    """
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask.astype(np.uint8))
+    if num_labels <= 2:
+        return mask
+
+    # Exclude background (label 0)
+    areas = stats[1:, cv2.CC_STAT_AREA]
+    largest_idx = 1 + int(np.argmax(areas))
+    largest_area = stats[largest_idx, cv2.CC_STAT_AREA]
+
+    clean_mask = (labels == largest_idx).astype(np.uint8)
+
+    # If any other component is substantial (> 60% of largest), keep it (e.g. 2 adjacent characters)
+    for i in range(1, num_labels):
+        if i != largest_idx and stats[i, cv2.CC_STAT_AREA] > largest_area * 0.60:
+            clean_mask = clean_mask | (labels == i).astype(np.uint8)
+
+    return clean_mask
+
+
+def prune_minority_beads(matrix_hex: List[List[str]], min_ratio: float = 0.008) -> List[List[str]]:
+    """
+    Prunes stray 1- or 2-bead color noise caused by reflections, shadows, or camera artifacts.
+    Replaces each minority bead with the most common valid orthogonal neighbor.
+    """
+    rows = len(matrix_hex)
+    cols = len(matrix_hex[0]) if rows > 0 else 0
+    if rows == 0 or cols == 0:
+        return matrix_hex
+
+    total_beads = sum(1 for r in range(rows) for c in range(cols) if matrix_hex[r][c] != "TRANSPARENT")
+    if total_beads <= 10:
+        return matrix_hex
+
+    counts = {}
+    for r in range(rows):
+        for c in range(cols):
+            h = matrix_hex[r][c]
+            if h != "TRANSPARENT":
+                counts[h] = counts.get(h, 0) + 1
+
+    min_beads = max(2, int(total_beads * min_ratio))
+    minority_colors = {h for h, cnt in counts.items() if cnt <= min_beads}
+
+    if not minority_colors or len(minority_colors) >= len(counts):
+        return matrix_hex
+
+    cleaned = [row[:] for row in matrix_hex]
+    for r in range(rows):
+        for c in range(cols):
+            if cleaned[r][c] in minority_colors:
+                nbrs = []
+                for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < rows and 0 <= nc < cols:
+                        nh = matrix_hex[nr][nc]
+                        if nh != "TRANSPARENT" and nh not in minority_colors:
+                            nbrs.append(nh)
+                if nbrs:
+                    cleaned[r][c] = max(set(nbrs), key=nbrs.count)
+
+    return cleaned
+
+
+def extract_photo_craft(image_bytes: bytes, img_bgr: np.ndarray, drop_satellites: bool = True):
     from rembg import remove, new_session
     pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     try:
@@ -213,7 +296,15 @@ def extract_photo_craft(image_bytes: bytes, img_bgr: np.ndarray):
     rgb = rgba[:, :, :3]
     alpha = rgba[:, :, 3]
 
+    # Suppress holes and specular glare on bead plastic
+    rgb = suppress_bead_holes_and_glare(rgb)
+
     mask_binary = (alpha > 30).astype(np.uint8)
+
+    # Discard isolated satellite objects (coins, hands, table edges)
+    if drop_satellites:
+        mask_binary = filter_largest_connected_component(mask_binary)
+
     coords = cv2.findNonZero(mask_binary)
     if coords is not None:
         bx, by, bw, bh = cv2.boundingRect(coords)
@@ -222,7 +313,8 @@ def extract_photo_craft(image_bytes: bytes, img_bgr: np.ndarray):
         by1 = max(0, by - pad)
         bx2 = min(rgb.shape[1], bx + bw + pad)
         by2 = min(rgb.shape[0], by + bh + pad)
-        return rgb[by1:by2, bx1:bx2], mask_binary[by1:by2, bx1:bx2]
+        if (bx2 - bx1) >= 4 and (by2 - by1) >= 4:
+            return rgb[by1:by2, bx1:bx2], mask_binary[by1:by2, bx1:bx2]
 
     return rgb, mask_binary
 
@@ -248,15 +340,21 @@ def process_pixel_art(
     custom_bg_hex: Optional[str] = None,
     decode_cell_codes: bool = False,
     sample_corners_bg: bool = False,
-    detect_red_dividers: bool = False
+    detect_red_dividers: bool = False,
+    input_mode: str = "auto",
+    drop_satellites: bool = True,
+    prune_minority: bool = True
 ) -> Dict[str, Any]:
+    t_start = time.time()
     nparr = np.frombuffer(image_bytes, np.uint8)
     img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img_bgr is None:
+        log_error("Image decode failed: provided file is not a valid image format (PNG/JPG)")
         raise ValueError("Provided file is not a valid image format (PNG/JPG).")
 
     # Strip solid black letterbox bars if present (e.g. mobile screenshots)
     img_bgr = auto_strip_letterbox(img_bgr)
+    orig_h, orig_w = img_bgr.shape[:2]
 
     # Retrieve selected brand catalog
     brand_data = get_brand_data(brand)
@@ -272,12 +370,14 @@ def process_pixel_art(
     target_cols = max(1, int(round(width_cm / bead_size_cm)))
     target_rows = max(1, int(round(height_cm / bead_size_cm)))
 
-    # 1. Grid / Chart detection
+    log_step("Ingest", f"Decoded input image: {orig_w}x{orig_h}px ({len(image_bytes)} bytes) | Target: {width_cm}x{height_cm}cm ({target_cols}x{target_rows} beads) | Brand: {brand_data['name']} | Mode: {input_mode}")
+
+    # 1. Mode Routing & Grid / Craft Detection
     grid_result = None
     is_pixel_art = False
 
-    if decode_cell_codes:
-        # User explicitly enabled chart mode for prints with rulers & cell letter codes (C3, R15)
+    if input_mode == "grid_chart" or (input_mode == "auto" and decode_cell_codes):
+        log_step("Detect", "Attempting annotated chart detection with cell codes...")
         grid_result = detect_annotated_chart(
             img_bgr,
             custom_bg_hex=custom_bg_hex,
@@ -286,8 +386,8 @@ def process_pixel_art(
             detect_red_dividers=detect_red_dividers
         )
 
-    if grid_result is None and grid_mode != "off":
-        force = (grid_mode == "force")
+    if grid_result is None and (input_mode == "grid_chart" or (input_mode == "auto" and grid_mode != "off")):
+        force = (grid_mode == "force" or input_mode == "grid_chart")
         grid_result = detect_and_sample_grid_template(
             img_bgr,
             force_grid=force,
@@ -299,8 +399,26 @@ def process_pixel_art(
 
     if grid_result is not None:
         craft_rgb, craft_mask = grid_result
+        log_step("Detect", f"Pattern chart detected: extracted {craft_rgb.shape[1]}x{craft_rgb.shape[0]} cells")
+    elif input_mode == "craft_photo":
+        log_step("Detect", "Executing Craft Photo pipeline (anti-hole inpainting + coin/satellite removal)...")
+        craft_rgb, craft_mask = extract_photo_craft(image_bytes, img_bgr, drop_satellites=drop_satellites)
+        log_step("Detect", f"Craft Photo complete: extracted {craft_rgb.shape[1]}x{craft_rgb.shape[0]} subject")
+    elif input_mode == "pixel_art":
+        pixel_art_result = extract_pixel_art_sprite(
+            image_bytes,
+            bg_tolerance=bg_tolerance,
+            custom_bg_hex=custom_bg_hex,
+            sample_corners_bg=sample_corners_bg
+        )
+        if pixel_art_result is not None:
+            craft_rgb, craft_mask, is_pixel_art = pixel_art_result
+        else:
+            craft_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+            craft_mask = np.ones((orig_h, orig_w), dtype=np.uint8)
     else:
-        # 2. Check for native Pixel Art (transparent PNG or solid background sprite)
+        # Default "auto" mode: check native pixel art sprite, then fallback to neural segmentation
+        log_step("Detect", "Checking for native Pixel Art (RGBA transparency / solid background)...")
         pixel_art_result = extract_pixel_art_sprite(
             image_bytes,
             bg_tolerance=bg_tolerance,
@@ -310,23 +428,29 @@ def process_pixel_art(
 
         if pixel_art_result is not None:
             craft_rgb, craft_mask, is_pixel_art = pixel_art_result
+            log_step("Detect", f"Pixel Art detected: extracted {craft_rgb.shape[1]}x{craft_rgb.shape[0]} sprite (is_pixel_art={is_pixel_art})")
         else:
-            # 3. General Photo mode with local AI (rembg)
-            craft_rgb, craft_mask = extract_photo_craft(image_bytes, img_bgr)
+            log_step("Detect", "Running neural photo segmentation (rembg) with satellite filter...")
+            craft_rgb, craft_mask = extract_photo_craft(image_bytes, img_bgr, drop_satellites=drop_satellites)
+            log_step("Detect", f"Photo segmentation complete: extracted {craft_rgb.shape[1]}x{craft_rgb.shape[0]} subject")
 
-    # 4. Proportionate fitting & 1:1 Pixel Art preservation
+    # Defensive boundary verification to eliminate Server 500 crashes
     ch, cw = craft_rgb.shape[:2]
+    if ch <= 0 or cw <= 0 or craft_mask is None or craft_mask.size == 0:
+        craft_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        craft_mask = np.ones((orig_h, orig_w), dtype=np.uint8)
+        ch, cw = orig_h, orig_w
 
-    # If the extracted subject is pixel art and already fits within the target board:
-    # PRESERVE 1:1 SCALE! 1 pixel = 1 bead. Do not stretch or introduce aliasing!
+    # 2. Proportionate fitting & 1:1 Pixel Art preservation
     if is_pixel_art and cw <= target_cols and ch <= target_rows:
         fit_w = cw
         fit_h = ch
         resized_craft_rgb = craft_rgb.copy()
         resized_craft_mask = craft_mask.copy()
+        log_step("Scale", f"Preserved 1:1 native scale ({cw}x{ch} beads) centered on {target_cols}x{target_rows} grid")
     else:
-        aspect_craft = cw / float(ch)
-        aspect_target = target_cols / float(target_rows)
+        aspect_craft = cw / float(max(1, ch))
+        aspect_target = target_cols / float(max(1, target_rows))
 
         if aspect_craft > aspect_target:
             fit_w = target_cols
@@ -335,29 +459,30 @@ def process_pixel_art(
             fit_h = target_rows
             fit_w = max(1, int(round(target_rows * aspect_craft)))
 
-        # Nearest-neighbor interpolation preserves clean pixel boundaries
-        resized_craft_rgb = cv2.resize(craft_rgb, (fit_w, fit_h), interpolation=cv2.INTER_NEAREST)
+        # Use clean area sampling for photos to avoid aliasing; INTER_NEAREST for pixel art
+        interp = cv2.INTER_NEAREST if is_pixel_art else cv2.INTER_AREA
+        resized_craft_rgb = cv2.resize(craft_rgb, (fit_w, fit_h), interpolation=interp)
         resized_craft_mask = cv2.resize(craft_mask, (fit_w, fit_h), interpolation=cv2.INTER_NEAREST)
+        log_step("Scale", f"Proportionally scaled {cw}x{ch} to {fit_w}x{fit_h} beads on {target_cols}x{target_rows} grid")
 
-    # Clean color consolidation:
-    r_ch = resized_craft_rgb[:, :, 0].astype(int)
-    g_ch = resized_craft_rgb[:, :, 1].astype(int)
-    b_ch = resized_craft_rgb[:, :, 2].astype(int)
-    min_c = np.minimum(np.minimum(r_ch, g_ch), b_ch)
-    max_c = np.maximum(np.maximum(r_ch, g_ch), b_ch)
+    # 3. Clean color consolidation & plastic bead stabilization
+    hsv = cv2.cvtColor(resized_craft_rgb, cv2.COLOR_RGB2HSV)
+    # White plastic: High value, low saturation (prevents bead holes from making belly grey)
+    is_white_bead = (hsv[:, :, 1] < 42) & (hsv[:, :, 2] > 165)
+    resized_craft_rgb[is_white_bead] = [255, 255, 255]
 
-    # 1. Unify near-white tones (min RGB >= 210, diff <= 28) to pure 255
-    is_near_white = (min_c >= 210) & ((max_c - min_c) <= 28)
-    resized_craft_rgb[is_near_white] = [255, 255, 255]
+    # Black contour: very low value
+    is_black_contour = (hsv[:, :, 2] < 45)
+    resized_craft_rgb[is_black_contour] = [0, 0, 0]
 
-    # 2. Unify near-black contours (max RGB <= 38) to pure 0
-    is_near_black = (max_c <= 38)
-    resized_craft_rgb[is_near_black] = [0, 0, 0]
-
-    # 3. Optional Flat Shading: unify light grey shadows into pure white
+    # Optional Flat Shading
     if flat_colors:
+        min_c = np.min(resized_craft_rgb, axis=2)
+        max_c = np.max(resized_craft_rgb, axis=2)
         is_grey_shadow = (min_c > 105) & ((max_c - min_c) < 25)
         resized_craft_rgb[is_grey_shadow] = [255, 255, 255]
+
+    log_step("Consolidate", f"Consolidated {int(np.sum(is_white_bead))} white beads and {int(np.sum(is_black_contour))} contour pixels")
 
     # Center craft inside the full matrix
     offset_x = (target_cols - fit_w) // 2
@@ -370,8 +495,11 @@ def process_pixel_art(
     canvas_mask[offset_y:offset_y+fit_h, offset_x:offset_x+fit_w] = resized_craft_mask
 
     # Quantize colors using CIEDE2000 to brand palette
+    t_quant_start = time.time()
     quantized_img, color_counts, matrix_hex = quantize_ciede2000(canvas_rgb, active_palette)
+    t_quant_ms = (time.time() - t_quant_start) * 1000
     algorithm_used = f"ciede2000_{brand_data['id']}"
+    log_step("Quantize", f"CIEDE2000 completed in {t_quant_ms:.1f}ms against {len(active_palette)} {brand_data['name']} palette colors")
 
     # In cutout mode, outer canvas area without craft becomes transparent
     if background_mode == "cutout":
@@ -379,6 +507,10 @@ def process_pixel_art(
             for c in range(target_cols):
                 if canvas_mask[r, c] == 0:
                     matrix_hex[r][c] = "TRANSPARENT"
+
+    # Prune isolated minority beads (< 0.8% of total) to eliminate stray glare/reflection colors
+    if prune_minority:
+        matrix_hex = prune_minority_beads(matrix_hex, min_ratio=0.008)
 
     # Count beads with manufacturer catalog metadata
     filtered_counts = {}
@@ -391,7 +523,6 @@ def process_pixel_art(
     clean_color_counts = []
     for hx, cnt in sorted(filtered_counts.items(), key=lambda x: x[1], reverse=True):
         upper_hex = hx.upper()
-        # Look up in selected brand first, then fallback to global lookup
         info = brand_lookup.get(upper_hex) or GLOBAL_COLOR_LOOKUP.get(upper_hex, {})
         clean_color_counts.append({
             "hex": hx,
@@ -399,6 +530,18 @@ def process_pixel_art(
             "code": info.get("code", ""),
             "name": info.get("name", f"{brand_data['name']} Bead")
         })
+
+    t_total_ms = (time.time() - t_start) * 1000
+    total_beads_count = sum(filtered_counts.values())
+    log_step("Success", f"Pattern ready in {t_total_ms:.1f}ms: {total_beads_count} beads across {len(clean_color_counts)} colors")
+
+    # Update quantized image buffer with clean matrix colors
+    for r in range(target_rows):
+        for c in range(target_cols):
+            h_val = matrix_hex[r][c]
+            if h_val != "TRANSPARENT":
+                from app.core.color_utils import hex_to_rgb
+                quantized_img[r, c] = hex_to_rgb(h_val)
 
     final_rgba = np.zeros((target_rows, target_cols, 4), dtype=np.uint8)
     final_rgba[:, :, :3] = quantized_img

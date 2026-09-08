@@ -20,12 +20,13 @@ import numpy as np
 from sklearn.cluster import KMeans
 from skimage.color import rgb2lab
 
+import traceback
 from app.schemas.process import ProcessResponse
 from app.services.image_processor import process_pixel_art
 from app.services.pdf_generator import generate_bead_pdf
 from app.core.brands import get_all_brands_summary, get_brand_data, BRANDS_CATALOG
 from app.core.color_utils import hex_to_rgb, rgb_to_hex
-from app.core.action_logger import record_action
+from app.core.action_logger import record_action, log_step, log_error
 
 router = APIRouter(prefix="/api", tags=["Pixel Art Processing"])
 
@@ -138,7 +139,10 @@ async def process_image_endpoint(
     custom_bg_hex: Optional[str] = Form(None, description="Optional custom background color hex (e.g. #FFFFFF or #F3ACD4)"),
     decode_cell_codes: Optional[bool] = Form(False, description="Explicitly decode pattern charts with cell letters/codes and rulers"),
     sample_corners_bg: Optional[bool] = Form(False, description="Sample background color exclusively from the 4 outer corners"),
-    detect_red_dividers: Optional[bool] = Form(False, description="Detect red grid divider lines and sample cell interior avoiding lines")
+    detect_red_dividers: Optional[bool] = Form(False, description="Detect red grid divider lines and sample cell interior avoiding lines"),
+    input_mode: Optional[str] = Form("auto", description="Processing archetype: 'auto', 'craft_photo', 'grid_chart', or 'pixel_art'"),
+    drop_satellites: Optional[bool] = Form(True, description="Drop secondary loose items such as coins, hands, or fabric scraps"),
+    prune_minority: Optional[bool] = Form(True, description="Prune stray 1- or 2-bead noise caused by glare/shadows")
 ):
     if width_cm <= 0 or height_cm <= 0 or bead_size_cm <= 0:
         raise HTTPException(
@@ -175,6 +179,9 @@ async def process_image_endpoint(
         "decode_cell_codes": decode_cell_codes,
         "sample_corners_bg": sample_corners_bg,
         "detect_red_dividers": detect_red_dividers,
+        "input_mode": input_mode or "auto",
+        "drop_satellites": drop_satellites,
+        "prune_minority": prune_minority,
     }
 
     try:
@@ -204,16 +211,26 @@ async def process_image_endpoint(
             custom_bg_hex=custom_bg_hex.strip() if custom_bg_hex and custom_bg_hex.strip() else None,
             decode_cell_codes=bool(decode_cell_codes),
             sample_corners_bg=bool(sample_corners_bg),
-            detect_red_dividers=bool(detect_red_dividers)
+            detect_red_dividers=bool(detect_red_dividers),
+            input_mode=str(input_mode or "auto"),
+            drop_satellites=bool(drop_satellites),
+            prune_minority=bool(prune_minority)
         )
         record_action(file.filename or "uploaded_image", img_shape, params_dict, result=result)
         return result
     except ValueError as ve:
-        record_action(file.filename or "uploaded_image", (0, 0, 0), params_dict, error=str(ve))
+        tb = traceback.format_exc()
+        log_error(f"Validation failure in /api/process: {ve}", ve, context=params_dict, traceback_str=tb)
+        record_action(file.filename or "uploaded_image", (0, 0, 0), params_dict, error=str(ve), traceback_str=tb)
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as exc:
-        record_action(file.filename or "uploaded_image", (0, 0, 0), params_dict, error=str(exc))
-        raise HTTPException(status_code=500, detail=f"Image processing error: {str(exc)}")
+        tb = traceback.format_exc()
+        log_error(f"Internal processing error in /api/process: {exc}", exc, context=params_dict, traceback_str=tb)
+        record_action(file.filename or "uploaded_image", (0, 0, 0), params_dict, error=str(exc), traceback_str=tb)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Image processing failed: {str(exc)}"
+        )
 
 
 class ExportPdfRequest(BaseModel):
@@ -230,6 +247,7 @@ async def export_pdf_endpoint(payload: ExportPdfRequest):
     Generates a millimeter-calibrated 1:1 scale printable A4 PDF
     with direct pegboard overlay guidance, test ruler, and shopping checklist.
     """
+    log_step("Export", f"Generating 1:1 scale PDF for brand {payload.brand} ({payload.grid.get('columns')}x{payload.grid.get('rows')} beads)...")
     try:
         pdf_buffer = generate_bead_pdf(
             matrix=payload.matrix,
@@ -239,11 +257,14 @@ async def export_pdf_endpoint(payload: ExportPdfRequest):
             pegboard_size_cm=payload.pegboard_size_cm or 14.5
         )
         filename = f"{payload.brand or 'perler'}-pattern-1to1.pdf"
+        log_step("Export", "1:1 scale PDF successfully compiled.")
         return StreamingResponse(
             pdf_buffer,
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
     except Exception as exc:
+        tb = traceback.format_exc()
+        log_error(f"Failed to generate PDF: {exc}", exc, traceback_str=tb)
         raise HTTPException(status_code=500, detail=f"PDF generation error: {str(exc)}")
 

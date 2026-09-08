@@ -326,6 +326,18 @@ def detect_and_sample_grid_template(
     if (len(col_peaks) < min_peaks or len(row_peaks) < min_peaks) and not red_info:
         return None
 
+    # Guard against physical bead photos (bead holes can mimic grid lines in the center,
+    # but corners are plain table/fabric with no grid lines).
+    if not force_grid and not red_info:
+        c_tl = gray[:max(4, h // 8), :max(4, w // 8)]
+        c_tr = gray[:max(4, h // 8), -max(4, w // 8):]
+        c_bl = gray[-max(4, h // 8):, :max(4, w // 8)]
+        c_br = gray[-max(4, h // 8):, -max(4, w // 8):]
+        corner_sobel = [np.mean(np.abs(cv2.Sobel(c, cv2.CV_32F, 1, 1))) for c in [c_tl, c_tr, c_bl, c_br]]
+        if np.mean(corner_sobel) < 0.8:
+            # Corners are flat desk/table without grid lines - this is a craft photo, not a grid template
+            return None
+
     if red_info is not None:
         pitch_x = red_info["pitch_x"]
         pitch_y = red_info["pitch_y"]
@@ -452,14 +464,17 @@ def detect_and_sample_grid_template(
                 cv2.floodFill(temp, flood_mask, (cols - 1, r), 100)
 
     outer_bg = (temp == 100)
-    character_mask = (~outer_bg).astype(np.uint8)
+    # Also clean interior enclosed holes (like arm gaps) that match the background paper color within tolerance
+    matching_bg = (delta_e < float(bg_tolerance))
+    character_mask = ((~outer_bg) & (~matching_bg)).astype(np.uint8)
 
-    # Crop tightly to character
+    # Crop tightly to character if valid foreground exists
     coords = cv2.findNonZero(character_mask)
     if coords is not None:
         bx, by, bw, bh = cv2.boundingRect(coords)
-        cropped_rgb = grid_rgb[by:by + bh, bx:bx + bw]
-        cropped_mask = character_mask[by:by + bh, bx:bx + bw]
-        return cropped_rgb, cropped_mask
+        if bw >= 4 and bh >= 4:
+            cropped_rgb = grid_rgb[by:by + bh, bx:bx + bw]
+            cropped_mask = character_mask[by:by + bh, bx:bx + bw]
+            return cropped_rgb, cropped_mask
 
     return grid_rgb, character_mask

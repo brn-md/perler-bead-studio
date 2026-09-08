@@ -4,7 +4,9 @@ import React, { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { CanvasWorkspace } from "@/components/CanvasWorkspace";
+import { ErrorModal } from "@/components/ErrorModal";
 import { ProcessResponse, PhysicalParams, BrandInfo } from "@/types";
+import { logger, ErrorDiagnostic } from "@/utils/logger";
 
 const DEFAULT_BRANDS: BrandInfo[] = [
   { id: "perler", name: "Perler Beads", country: "USA", badge: "Perler", description: "Standard 5mm Midi & 2.6mm Mini beads with vibrant iconic shades.", count: 38, colors: [] },
@@ -42,6 +44,7 @@ export default function Home() {
   const [processedData, setProcessedData] = useState<ProcessResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+  const [errorModal, setErrorModal] = useState<ErrorDiagnostic | null>(null);
 
   // Fetch full brand catalogs on mount
   useEffect(() => {
@@ -82,6 +85,7 @@ export default function Home() {
   };
 
   const handleFileSelect = (file: File) => {
+    logger.info("Upload", `Arquivo selecionado: "${file.name}" (${(file.size / 1024).toFixed(1)} KB, type: ${file.type || "unknown"})`);
     setSelectedFile(file);
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
@@ -91,12 +95,22 @@ export default function Home() {
   };
 
   const handleBrandChange = (brandId: string) => {
+    logger.info("Brand", `Marca alterada para: ${brandId}`);
     setSelectedBrand(brandId);
     setPalette([]);
   };
 
   const handleProcess = async (file: File) => {
     setIsLoading(true);
+    const t0 = performance.now();
+    logger.info("Process", `Iniciando processamento de "${file.name}"...`, {
+      widthCm: params.widthCm,
+      heightCm: params.heightCm,
+      brand: selectedBrand,
+      gridMode: params.gridMode,
+      bgTolerance: params.bgTolerance,
+    });
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -117,6 +131,9 @@ export default function Home() {
       formData.append("decode_cell_codes", params.decodeCellCodes ? "true" : "false");
       formData.append("sample_corners_bg", params.sampleCornersBg ? "true" : "false");
       formData.append("detect_red_dividers", params.detectRedDividers ? "true" : "false");
+      formData.append("input_mode", params.inputMode || "auto");
+      formData.append("drop_satellites", params.dropSatellites !== false ? "true" : "false");
+      formData.append("prune_minority", params.pruneMinority !== false ? "true" : "false");
       if (params.customBgHex) {
         formData.append("custom_bg_hex", params.customBgHex);
       }
@@ -131,15 +148,33 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Server responded with ${response.status}`);
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status} ${response.statusText}` }));
+        const errorMsg = typeof errorData.detail === "string" ? errorData.detail : (errorData.detail?.message || `Erro do servidor (${response.status})`);
+        logger.error("Process", `Falha na requisição /api/process (${response.status})`, errorData);
+        setErrorModal({
+          title: "Erro no Processamento da Imagem",
+          message: errorMsg,
+          stage: "process",
+          status: response.status,
+          details: JSON.stringify(errorData, null, 2),
+          timestamp: new Date().toLocaleTimeString(),
+        });
+        return;
       }
 
       const data: ProcessResponse = await response.json();
+      const elapsed = (performance.now() - t0).toFixed(0);
+      logger.success("Process", `Padrão gerado com sucesso em ${elapsed}ms: ${data.grid.columns}x${data.grid.rows} (${data.grid.total_beads} beads)`, data.grid);
       setProcessedData(data);
     } catch (err: any) {
-      console.error("Processing failed:", err);
-      alert(`Error processing pattern: ${err.message || "Network error"}`);
+      logger.error("Process", "Falha de rede ou exceção no cliente", err);
+      setErrorModal({
+        title: "Erro de Conexão ou Processamento",
+        message: err.message || "Não foi possível conectar ao servidor backend (FastAPI na porta 8000).",
+        stage: "client_network",
+        details: err.stack || String(err),
+        timestamp: new Date().toLocaleTimeString(),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -148,6 +183,7 @@ export default function Home() {
   const handleExportPdf = async () => {
     if (!processedData) return;
     setIsExportingPdf(true);
+    const t0 = performance.now();
     try {
       const currentBrandObj = brands.find((b) => b.id === selectedBrand) || brands[0];
       const payload = {
@@ -158,6 +194,8 @@ export default function Home() {
         pegboard_size_cm: params.pegboardSizeCm || 14.5,
       };
 
+      logger.info("Export PDF", "Solicitando PDF calibrado 1:1...", payload);
+
       const res = await fetch("/api/export-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -165,8 +203,18 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || "Failed to generate PDF");
+        const errorData = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+        const errorMsg = typeof errorData.detail === "string" ? errorData.detail : "Falha ao gerar o arquivo PDF.";
+        logger.error("Export PDF", "Falha na exportação de PDF", errorData);
+        setErrorModal({
+          title: "Erro ao Exportar PDF",
+          message: errorMsg,
+          stage: "export_pdf",
+          status: res.status,
+          details: JSON.stringify(errorData, null, 2),
+          timestamp: new Date().toLocaleTimeString(),
+        });
+        return;
       }
 
       const blob = await res.blob();
@@ -176,21 +224,42 @@ export default function Home() {
       link.download = `${currentBrandObj?.id || "perler"}-pattern-1to1-scale.pdf`;
       link.click();
       URL.revokeObjectURL(url);
+      const elapsed = (performance.now() - t0).toFixed(0);
+      logger.success("Export PDF", `PDF 1:1 gerado e baixado em ${elapsed}ms.`);
     } catch (err: any) {
-      console.error("PDF export failed:", err);
-      alert(`Error generating PDF: ${err.message || "Network error"}`);
+      logger.error("Export PDF", "Exceção ao gerar PDF", err);
+      setErrorModal({
+        title: "Falha na Exportação do PDF",
+        message: err.message || "Erro inesperado ao criar o documento PDF.",
+        stage: "client_export_pdf",
+        details: err.stack || String(err),
+        timestamp: new Date().toLocaleTimeString(),
+      });
     } finally {
       setIsExportingPdf(false);
     }
   };
 
   const handleExportPng = () => {
-    const canvas = document.querySelector("canvas");
-    if (!canvas || !processedData) return;
-    const link = document.createElement("a");
-    link.download = `perler-pattern-${selectedBrand}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+    try {
+      const canvas = document.querySelector("canvas");
+      if (!canvas || !processedData) return;
+      logger.info("Export PNG", "Exportando matriz do canvas como PNG...");
+      const link = document.createElement("a");
+      link.download = `perler-pattern-${selectedBrand}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      logger.success("Export PNG", "Imagem PNG salva com sucesso.");
+    } catch (err: any) {
+      logger.error("Export PNG", "Falha ao exportar PNG", err);
+      setErrorModal({
+        title: "Erro ao Salvar PNG",
+        message: err.message || "Não foi possível extrair os pixels do canvas.",
+        stage: "export_png",
+        details: err.stack || String(err),
+        timestamp: new Date().toLocaleTimeString(),
+      });
+    }
   };
 
   return (
@@ -230,6 +299,12 @@ export default function Home() {
           brands={brands}
         />
       </div>
+
+      {/* Structured Error Diagnostics Modal */}
+      <ErrorModal
+        error={errorModal}
+        onClose={() => setErrorModal(null)}
+      />
     </div>
   );
 }

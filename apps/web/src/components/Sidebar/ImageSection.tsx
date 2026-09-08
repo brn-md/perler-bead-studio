@@ -88,8 +88,77 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
         </div>
       )}
 
+      {/* Archetype Pipeline Selector */}
+      <div className="space-y-1.5 pt-1">
+        <label className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
+          <span>Tipo de Imagem / Modo</span>
+          <span className="text-[10px] text-indigo-400 font-normal">Otimização dedicada</span>
+        </label>
+        <div className="grid grid-cols-2 gap-1.5">
+          <button
+            type="button"
+            onClick={() => onParamsChange({ ...params, inputMode: "craft_photo", dropSatellites: true, pruneMinority: true })}
+            className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+              params.inputMode === "craft_photo"
+                ? "bg-indigo-950/80 border-indigo-500 text-indigo-100 ring-1 ring-indigo-500/40"
+                : "bg-slate-900/40 border-slate-800 text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            }`}
+          >
+            <div className="text-[11px] font-semibold flex items-center gap-1.5">
+              <span>📸 Foto Real</span>
+            </div>
+            <div className="text-[9px] text-slate-400 mt-0.5">Anti-furo + descarta moeda</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onParamsChange({ ...params, inputMode: "grid_chart", gridMode: "force", pruneMinority: true })}
+            className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+              params.inputMode === "grid_chart"
+                ? "bg-indigo-950/80 border-indigo-500 text-indigo-100 ring-1 ring-indigo-500/40"
+                : "bg-slate-900/40 border-slate-800 text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            }`}
+          >
+            <div className="text-[11px] font-semibold flex items-center gap-1.5">
+              <span>📐 Gráfico / Grade</span>
+            </div>
+            <div className="text-[9px] text-slate-400 mt-0.5">Pinterest, Etsy, Caderno</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onParamsChange({ ...params, inputMode: "pixel_art", gridMode: "off", pruneMinority: false })}
+            className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+              params.inputMode === "pixel_art"
+                ? "bg-indigo-950/80 border-indigo-500 text-indigo-100 ring-1 ring-indigo-500/40"
+                : "bg-slate-900/40 border-slate-800 text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            }`}
+          >
+            <div className="text-[11px] font-semibold flex items-center gap-1.5">
+              <span>👾 Pixel Art 1:1</span>
+            </div>
+            <div className="text-[9px] text-slate-400 mt-0.5">Sprite digital nítido</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onParamsChange({ ...params, inputMode: "auto" })}
+            className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+              !params.inputMode || params.inputMode === "auto"
+                ? "bg-indigo-950/80 border-indigo-500 text-indigo-100 ring-1 ring-indigo-500/40"
+                : "bg-slate-900/40 border-slate-800 text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            }`}
+          >
+            <div className="text-[11px] font-semibold flex items-center gap-1.5">
+              <span>🪄 Automático</span>
+            </div>
+            <div className="text-[9px] text-slate-400 mt-0.5">Auto-classificação IA</div>
+          </button>
+        </div>
+      </div>
+
       {/* Background Cutout Mode */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 pt-1">
         <button
           type="button"
           onClick={() => onParamsChange({ ...params, backgroundMode: "cutout" })}
