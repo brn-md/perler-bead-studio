@@ -135,6 +135,11 @@ def detect_annotated_chart(
     Extracts the bead matrix ignoring cell text codes and cleans background.
     """
     img = auto_strip_letterbox(img_bgr)
+
+    # Fast guard: if image has <= 64 unique colors, it is clean pixel art, not a printed/scanned paper chart
+    if len(np.unique(img.reshape(-1, 3), axis=0)) <= 64:
+        return None
+
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     h, w = gray.shape
 
@@ -226,11 +231,6 @@ def detect_annotated_chart(
         if ruler_cells >= cols * 0.55:
             top_ruler_r = r
 
-    if top_ruler_r is not None:
-        sampled_rgb = sampled_rgb[top_ruler_r + 1:]
-        is_bead = is_bead[top_ruler_r + 1:]
-        rows = sampled_rgb.shape[0]
-
     bottom_ruler_r = None
     for r in range(rows - 1, max(0, rows // 2), -1):
         ruler_cells = sum(
@@ -241,6 +241,15 @@ def detect_annotated_chart(
         if ruler_cells >= cols * 0.55:
             bottom_ruler_r = r
             break
+
+    # If no coordinate ruler was detected at all, this is not an annotated ruler chart
+    if top_ruler_r is None and bottom_ruler_r is None:
+        return None
+
+    if top_ruler_r is not None:
+        sampled_rgb = sampled_rgb[top_ruler_r + 1:]
+        is_bead = is_bead[top_ruler_r + 1:]
+        rows = sampled_rgb.shape[0]
 
     if bottom_ruler_r is not None:
         sampled_rgb = sampled_rgb[:bottom_ruler_r]

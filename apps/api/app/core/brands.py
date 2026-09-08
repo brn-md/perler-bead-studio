@@ -1,4 +1,4 @@
-﻿"""
+"""
 Bead Brands Catalog Database (app/core/brands.py)
 -------------------------------------------------
 Supports official manufacturer palettes:
@@ -29,8 +29,8 @@ BRANDS_CATALOG: Dict[str, Dict[str, Any]] = {
             {"code": "P21", "name": "Light Brown", "hex": "#A0522D"},
             {"code": "P12", "name": "Brown", "hex": "#603813"},
             {"code": "P88", "name": "Cherry", "hex": "#7B1113"},
-            {"code": "P09", "name": "Red", "hex": "#D00000"},
-            {"code": "P91", "name": "Tangerine", "hex": "#FF4500"},
+            {"code": "P09", "name": "Red", "hex": "#E31B23"},
+            {"code": "P91", "name": "Tangerine", "hex": "#F7703B"},
             {"code": "P59", "name": "Orange", "hex": "#FF7F00"},
             {"code": "P57", "name": "Cheddar", "hex": "#FFAA00"},
             {"code": "P03", "name": "Yellow", "hex": "#FFD700"},
@@ -43,9 +43,9 @@ BRANDS_CATALOG: Dict[str, Dict[str, Any]] = {
             {"code": "P66", "name": "Olive", "hex": "#556B2F"},
             {"code": "P96", "name": "Turquoise", "hex": "#40E0D0"},
             {"code": "P62", "name": "Pastel Blue", "hex": "#AEC6CF"},
-            {"code": "P10", "name": "Light Blue", "hex": "#00BFFF"},
-            {"code": "P06", "name": "Blue", "hex": "#0000CD"},
-            {"code": "P08", "name": "Dark Blue", "hex": "#000080"},
+            {"code": "P10", "name": "Light Blue", "hex": "#3E97D1"},
+            {"code": "P06", "name": "Blue", "hex": "#1B48A0"},
+            {"code": "P08", "name": "Dark Blue", "hex": "#0F265C"},
             {"code": "P07", "name": "Pastel Lavender", "hex": "#E0BBE4"},
             {"code": "P13", "name": "Purple", "hex": "#6A0DAD"},
             {"code": "P17", "name": "Plum", "hex": "#8B008B"},
@@ -53,7 +53,7 @@ BRANDS_CATALOG: Dict[str, Dict[str, Any]] = {
             {"code": "P79", "name": "Magenta", "hex": "#FF1493"},
             {"code": "P83", "name": "Bubblegum", "hex": "#FF6B97"},
             {"code": "P05", "name": "Pink", "hex": "#FF99C8"},
-            {"code": "P04", "name": "Blush / Peach", "hex": "#FFB6C1"},
+            {"code": "P04", "name": "Blush / Peach", "hex": "#FBBFA9"},
             {"code": "P85", "name": "Gold Metallic", "hex": "#D4AF37"},
             {"code": "P86", "name": "Silver Metallic", "hex": "#C0C0C0"},
             {"code": "P63", "name": "Clear / Translucent", "hex": "#E8ECEF"},

@@ -151,19 +151,27 @@ def quantize_ciede2000(
     palette_rgb_list = [hex_to_rgb(hx) for hx in palette_hex]
     palette_rgb_arr = np.array(palette_rgb_list, dtype=np.float32) / 255.0
     palette_lab = rgb2lab(palette_rgb_arr.reshape(-1, 1, 3)).reshape(-1, 3)
+    palette_chroma = np.sqrt(palette_lab[:, 1]**2 + palette_lab[:, 2]**2)
 
     # 2. Convert input image to CIELAB space
     img_rgb_norm = image_rgb.astype(np.float32) / 255.0
     img_lab = rgb2lab(img_rgb_norm).reshape(-1, 1, 3)  # Shape: (H * W, 1, 3)
+    img_chroma = np.sqrt(img_lab[:, 0, 1]**2 + img_lab[:, 0, 2]**2)
 
     n_pixels = h * w
     n_colors = len(palette_hex)
 
-    # 3. Vectorized CIEDE2000 computation across palette entries
+    # 3. Vectorized CIEDE2000 computation across palette entries with graphic-arts weighting (kL=2.0)
+    # and chromaticity protection (prevents saturated colors from collapsing into achromatic greys)
     distances = np.zeros((n_pixels, n_colors), dtype=np.float32)
     for j in range(n_colors):
         color_j = palette_lab[j:j+1, :].reshape(1, 1, 3)
-        distances[:, j] = deltaE_ciede2000(img_lab, color_j).flatten()
+        d = deltaE_ciede2000(img_lab, color_j, kL=2.0).flatten()
+        # Protect saturated colors: if input pixel has color (chroma > 15), penalize neutral grey candidates (chroma < 8)
+        if palette_chroma[j] < 8.0:
+            neutral_penalty = np.where(img_chroma > 15.0, 30.0, 0.0).astype(np.float32)
+            d += neutral_penalty
+        distances[:, j] = d
 
     closest_indices = np.argmin(distances, axis=1)
 

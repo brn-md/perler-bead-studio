@@ -107,7 +107,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
             <div className="text-[11px] font-semibold flex items-center gap-1.5">
               <span>📸 Foto Real</span>
             </div>
-            <div className="text-[9px] text-slate-400 mt-0.5">Anti-furo + descarta moeda</div>
+            <div className="text-[9px] text-slate-400 mt-0.5">Isolar peça e remover furos</div>
           </button>
 
           <button

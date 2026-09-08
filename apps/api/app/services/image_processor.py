@@ -134,6 +134,16 @@ def extract_pixel_art_sprite(
     rgb = np.array(pil_img.convert("RGB"))
     h, w = rgb.shape[:2]
 
+    # Deterministic pixel art signature: indexed palette count
+    unique_colors = len(np.unique(rgb.reshape(-1, 3), axis=0))
+    is_indexed_palette = (unique_colors <= 64)
+
+    # Sample perimeter border to find dominant background color
+    border_pixels = np.vstack([rgb[0, :], rgb[-1, :], rgb[:, 0], rgb[:, -1]])
+    u_vals, u_counts = np.unique(border_pixels, axis=0, return_counts=True)
+    mode_bg = u_vals[np.argmax(u_counts)]
+    mode_freq = float(np.max(u_counts)) / float(len(border_pixels))
+
     p = max(2, min(8, h // 10, w // 10))
     c_tl = rgb[0:p, 0:p].reshape(-1, 3)
     c_tr = rgb[0:p, -p:].reshape(-1, 3)
@@ -142,12 +152,16 @@ def extract_pixel_art_sprite(
     corners = np.vstack([c_tl, c_tr, c_bl, c_br])
     corner_std = np.std(corners, axis=0).max()
 
-    if corner_std < 22 or custom_bg_hex is not None:
+    is_pixel_sprite = is_indexed_palette or (mode_freq > 0.45) or (corner_std < 22) or (custom_bg_hex is not None)
+
+    if is_pixel_sprite:
         if custom_bg_hex:
             try:
                 bg_rgb = np.array(hex_to_rgb(custom_bg_hex), dtype=np.float32)
             except Exception:
-                bg_rgb = np.median(corners, axis=0)
+                bg_rgb = mode_bg.astype(np.float32)
+        elif mode_freq > 0.40:
+            bg_rgb = mode_bg.astype(np.float32)
         else:
             bg_rgb = np.median(corners, axis=0)
 
@@ -197,8 +211,8 @@ def extract_pixel_art_sprite(
                             down_mask[r, c] = cropped_mask[cy, cx]
                     return down_rgb, down_mask, True
 
-                is_small_sprite = max(bw, bh) <= 128
-                return cropped_rgb, cropped_mask, is_small_sprite
+                is_sprite = is_indexed_palette or (max(bw, bh) <= 128)
+                return cropped_rgb, cropped_mask, is_sprite
 
     return None
 
@@ -399,7 +413,8 @@ def process_pixel_art(
 
     if grid_result is not None:
         craft_rgb, craft_mask = grid_result
-        log_step("Detect", f"Pattern chart detected: extracted {craft_rgb.shape[1]}x{craft_rgb.shape[0]} cells")
+        is_pixel_art = True
+        log_step("Detect", f"Pattern chart detected: extracted {craft_rgb.shape[1]}x{craft_rgb.shape[0]} cells (is_pixel_art=True)")
     elif input_mode == "craft_photo":
         log_step("Detect", "Executing Craft Photo pipeline (anti-hole inpainting + coin/satellite removal)...")
         craft_rgb, craft_mask = extract_photo_craft(image_bytes, img_bgr, drop_satellites=drop_satellites)
@@ -465,15 +480,12 @@ def process_pixel_art(
         resized_craft_mask = cv2.resize(craft_mask, (fit_w, fit_h), interpolation=cv2.INTER_NEAREST)
         log_step("Scale", f"Proportionally scaled {cw}x{ch} to {fit_w}x{fit_h} beads on {target_cols}x{target_rows} grid")
 
-    # 3. Clean color consolidation & plastic bead stabilization
-    hsv = cv2.cvtColor(resized_craft_rgb, cv2.COLOR_RGB2HSV)
-    # White plastic: High value, low saturation (prevents bead holes from making belly grey)
-    is_white_bead = (hsv[:, :, 1] < 42) & (hsv[:, :, 2] > 165)
-    resized_craft_rgb[is_white_bead] = [255, 255, 255]
-
-    # Black contour: very low value
-    is_black_contour = (hsv[:, :, 2] < 45)
-    resized_craft_rgb[is_black_contour] = [0, 0, 0]
+    # 3. Clean color consolidation & plastic bead stabilization (photo mode only)
+    if not is_pixel_art:
+        hsv = cv2.cvtColor(resized_craft_rgb, cv2.COLOR_RGB2HSV)
+        # White plastic: High value, low saturation (prevents bead holes from making belly grey in photos)
+        is_white_bead = (hsv[:, :, 1] < 38) & (hsv[:, :, 2] > 175)
+        resized_craft_rgb[is_white_bead] = [255, 255, 255]
 
     # Optional Flat Shading
     if flat_colors:
@@ -481,8 +493,6 @@ def process_pixel_art(
         max_c = np.max(resized_craft_rgb, axis=2)
         is_grey_shadow = (min_c > 105) & ((max_c - min_c) < 25)
         resized_craft_rgb[is_grey_shadow] = [255, 255, 255]
-
-    log_step("Consolidate", f"Consolidated {int(np.sum(is_white_bead))} white beads and {int(np.sum(is_black_contour))} contour pixels")
 
     # Center craft inside the full matrix
     offset_x = (target_cols - fit_w) // 2
