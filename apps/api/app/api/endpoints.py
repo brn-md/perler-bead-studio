@@ -133,7 +133,8 @@ async def process_image_endpoint(
     background_mode: Optional[str] = Form("cutout", description="Background mode: 'cutout' (transparent silhouette) or 'solid' (fill plate with beads)"),
     grid_mode: Optional[str] = Form("auto", description="Grid detector mode: 'auto', 'force', or 'off'"),
     bg_tolerance: Optional[float] = Form(30.0, description="Perimeter background Delta-E color tolerance (0-100)"),
-    flat_colors: Optional[bool] = Form(False, description="Flatten noise and secondary shading into pure base colors")
+    flat_colors: Optional[bool] = Form(False, description="Flatten noise and secondary shading into pure base colors"),
+    custom_bg_hex: Optional[str] = Form(None, description="Optional custom background color hex (e.g. #FFFFFF or #F3ACD4)")
 ):
     if width_cm <= 0 or height_cm <= 0 or bead_size_cm <= 0:
         raise HTTPException(
@@ -172,7 +173,8 @@ async def process_image_endpoint(
             background_mode=background_mode or "cutout",
             grid_mode=grid_mode or "auto",
             bg_tolerance=float(bg_tolerance) if bg_tolerance is not None else 30.0,
-            flat_colors=bool(flat_colors)
+            flat_colors=bool(flat_colors),
+            custom_bg_hex=custom_bg_hex.strip() if custom_bg_hex and custom_bg_hex.strip() else None
         )
         return result
     except ValueError as ve:

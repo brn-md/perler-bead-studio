@@ -87,6 +87,9 @@ export default function Home() {
       formData.append("grid_mode", params.gridMode || "auto");
       formData.append("bg_tolerance", (params.bgTolerance ?? 30).toString());
       formData.append("flat_colors", params.flatColors ? "true" : "false");
+      if (params.customBgHex) {
+        formData.append("custom_bg_hex", params.customBgHex);
+      }
 
       if (palette.length > 0) {
         formData.append("palette_hex", JSON.stringify(palette));

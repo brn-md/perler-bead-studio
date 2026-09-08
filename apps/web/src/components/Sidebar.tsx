@@ -21,6 +21,8 @@ import {
   ChevronDown,
   ChevronRight,
   Wand2,
+  Pipette,
+  FileText,
 } from "lucide-react";
 import { PaletteManager } from "./PaletteManager";
 import { PhysicalParams, BrandInfo } from "@/types";
@@ -150,6 +152,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ...params,
       [field]: value,
     });
+  };
+
+  const handlePickColor = async () => {
+    if (typeof window !== "undefined" && "EyeDropper" in window) {
+      try {
+        // @ts-ignore
+        const eyeDropper = new window.EyeDropper();
+        const result = await eyeDropper.open();
+        if (result?.sRGBHex) {
+          handleInputChange("customBgHex", result.sRGBHex.toUpperCase());
+        }
+      } catch {
+        // User cancelled picker
+      }
+    }
   };
 
   const isMini50 = Math.abs(params.beadSizeCm - 0.26) < 0.01 && Math.abs(params.pegboardSizeCm - 13.0) < 0.1;
@@ -698,43 +715,80 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {showAdvancedFilters && (
             <div className="pt-2 border-t border-slate-800/80 space-y-3 animate-in fade-in duration-200">
-              {/* Preset 1-Click Fix */}
-              <div className="p-2.5 bg-gradient-to-r from-pink-950/40 to-purple-950/40 border border-pink-800/40 rounded-lg space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-pink-200 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-pink-400" />
-                    Preset de Correção Inteligente
-                  </span>
+              {/* Presets de Correção Inteligente */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-pink-400" />
+                  Presets de Correção Rápida
+                </span>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {/* Preset 1: Pixel Art / Fundo Colorido */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onParamsChange({
+                        ...params,
+                        gridMode: "force",
+                        bgTolerance: 35,
+                        flatColors: true,
+                        backgroundMode: "cutout",
+                      });
+                    }}
+                    className={`w-full py-2 px-2.5 rounded-lg text-xs font-semibold border text-left transition-all cursor-pointer ${
+                      params.gridMode === "force" && params.flatColors
+                        ? "bg-pink-950/80 border-pink-500 text-pink-200 shadow-sm"
+                        : "bg-slate-950/80 border-slate-800 text-slate-300 hover:border-pink-900 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span>✨ Otimizar Pixel Art & Fundo Colorido</span>
+                      </span>
+                      {params.gridMode === "force" && params.flatColors && (
+                        <Check className="w-3.5 h-3.5 text-pink-400" />
+                      )}
+                    </div>
+                    <p className="text-[9.5px] text-slate-400 font-normal mt-0.5 leading-tight">
+                      Alinha a grade pino por pino, isola o fundo por proximidade cromática da borda e unifica tons secundários em branco liso.
+                    </p>
+                  </button>
+
+                  {/* Preset 2: Gabarito / Print de Celular */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onParamsChange({
+                        ...params,
+                        gridMode: "force",
+                        bgTolerance: 30,
+                        flatColors: false,
+                        backgroundMode: "cutout",
+                      });
+                    }}
+                    className={`w-full py-2 px-2.5 rounded-lg text-xs font-semibold border text-left transition-all cursor-pointer ${
+                      params.gridMode === "force" && !params.flatColors
+                        ? "bg-purple-950/80 border-purple-500 text-purple-200 shadow-sm"
+                        : "bg-slate-950/80 border-slate-800 text-slate-300 hover:border-purple-900 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <FileText className="w-3 h-3 text-purple-400" />
+                        <span>📋 Ler Gabarito Técnico / Print</span>
+                      </span>
+                      {params.gridMode === "force" && !params.flatColors && (
+                        <Check className="w-3.5 h-3.5 text-purple-400" />
+                      )}
+                    </div>
+                    <p className="text-[9.5px] text-slate-400 font-normal mt-0.5 leading-tight">
+                      Para prints com réguas numeradas (ex: 29×46) e letrinhas nas células (C3, R15). Corta réguas e ignora códigos internos.
+                    </p>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onParamsChange({
-                      ...params,
-                      gridMode: "force",
-                      bgTolerance: 35,
-                      flatColors: true,
-                      backgroundMode: "cutout",
-                    });
-                  }}
-                  className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    params.gridMode === "force" && params.flatColors
-                      ? "bg-pink-600 text-white border-pink-400 shadow-md shadow-pink-900/40"
-                      : "bg-pink-950/60 border-pink-700/60 text-pink-200 hover:bg-pink-900/60"
-                  }`}
-                >
-                  <span>🎀 Fix Fundo Rosa / Grade & Sombra</span>
-                  {params.gridMode === "force" && params.flatColors && (
-                    <Check className="w-3.5 h-3.5 text-white" />
-                  )}
-                </button>
-                <p className="text-[10px] text-pink-300/80 leading-relaxed">
-                  Ideal para imagens com fundo rosa claro, grades desenhadas e sombras indesejadas. Força alinhamento dos pixels, isola o fundo pela cor da borda e unifica tons secundários em branco liso.
-                </p>
               </div>
 
               {/* Controle 1: Detector de Grade */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 pt-1 border-t border-slate-800/60">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-medium text-slate-300">
                     Detector Universal de Grade
@@ -779,41 +833,111 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 </div>
                 <p className="text-[9.5px] text-slate-400 leading-tight">
-                  Identifica a frequência dos pixels desenhados (6px a 40px) para que cada quadrado vire exatamente 1 bead.
+                  Identifica a frequência dos pixels desenhados (5px a 45px) para que cada quadrado vire exatamente 1 bead.
                 </p>
               </div>
 
-              {/* Controle 2: Tolerância de Fundo da Borda */}
-              <div className="space-y-1.5">
+              {/* Controle 2: Cor e Remoção de Fundo */}
+              <div className="space-y-2 pt-1 border-t border-slate-800/60">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-medium text-slate-300">
-                    Tolerância de Fundo da Borda (ΔE)
+                    Origem da Cor de Fundo
                   </label>
-                  <span className="text-[10px] text-purple-300 font-mono font-semibold">
-                    {params.bgTolerance ?? 30}
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {params.customBgHex ? "Cor Manual" : "Amostragem da Borda"}
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min="10"
-                  max="60"
-                  step="5"
-                  value={params.bgTolerance ?? 30}
-                  onChange={(e) => handleInputChange("bgTolerance", parseFloat(e.target.value))}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                />
-                <div className="flex justify-between text-[9px] text-slate-500 font-mono">
-                  <span>10 (Estrito)</span>
-                  <span>30 (Padrão)</span>
-                  <span>60 (Amplo)</span>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange("customBgHex", undefined)}
+                    className={`py-1 px-2 rounded text-[10px] font-medium border transition-colors cursor-pointer ${
+                      !params.customBgHex
+                        ? "bg-purple-950 border-purple-600 text-purple-200"
+                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Auto (Bordas)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange("customBgHex", params.customBgHex || "#FFFFFF")}
+                    className={`py-1 px-2 rounded text-[10px] font-medium border transition-colors cursor-pointer flex items-center justify-center gap-1 ${
+                      params.customBgHex
+                        ? "bg-purple-950 border-purple-600 text-purple-200"
+                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Pipette className="w-2.5 h-2.5" />
+                    <span>Personalizada</span>
+                  </button>
                 </div>
-                <p className="text-[9.5px] text-slate-400 leading-tight">
-                  Amostra as cores que tocam a borda da imagem e remove o fundo por proximidade perceptual, preservando detalhes como roupas e laços.
-                </p>
+
+                {/* Seletor de Cor Customizada & Conta-gotas */}
+                {params.customBgHex && (
+                  <div className="p-2 bg-slate-950/90 border border-slate-700/80 rounded-lg space-y-2 animate-in fade-in duration-150">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={params.customBgHex}
+                        onChange={(e) => handleInputChange("customBgHex", e.target.value.toUpperCase())}
+                        className="w-7 h-7 rounded border border-slate-700 bg-transparent cursor-pointer shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={params.customBgHex}
+                        onChange={(e) => handleInputChange("customBgHex", e.target.value.toUpperCase())}
+                        placeholder="#FFFFFF"
+                        className="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white font-mono uppercase focus:outline-none focus:border-purple-500"
+                      />
+                      {typeof window !== "undefined" && "EyeDropper" in window && (
+                        <button
+                          type="button"
+                          onClick={handlePickColor}
+                          className="flex-1 py-1 px-2 bg-purple-900/60 hover:bg-purple-800 border border-purple-600/70 rounded text-[10px] text-purple-200 font-medium flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                          title="Clique para capturar qualquer cor da imagem na tela com o conta-gotas"
+                        >
+                          <Pipette className="w-3 h-3" />
+                          <span>Conta-gotas</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[9px] text-slate-400 leading-tight">
+                      O app usará essa cor exata para eliminar o fundo por proximidade perceptual (ΔE).
+                    </p>
+                  </div>
+                )}
+
+                {/* Tolerância de Fundo (ΔE) */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-medium text-slate-400">
+                      Tolerância de Fundo (ΔE):
+                    </label>
+                    <span className="text-[10px] text-purple-300 font-mono font-semibold">
+                      {params.bgTolerance ?? 30}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="60"
+                    step="5"
+                    value={params.bgTolerance ?? 30}
+                    onChange={(e) => handleInputChange("bgTolerance", parseFloat(e.target.value))}
+                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                  />
+                  <div className="flex justify-between text-[8.5px] text-slate-500 font-mono">
+                    <span>10 (Estrito)</span>
+                    <span>30 (Padrão)</span>
+                    <span>60 (Amplo)</span>
+                  </div>
+                </div>
               </div>
 
               {/* Controle 3: Simplificação de Sombras / Tons Secundários */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 pt-1 border-t border-slate-800/60">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-medium text-slate-300">
                     Filtro de Sombras / Corpo Branco
@@ -841,7 +965,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
 
               {/* Botão Reset */}
-              {(params.gridMode !== "auto" || params.flatColors || params.bgTolerance !== 30) && (
+              {(params.gridMode !== "auto" || params.flatColors || params.bgTolerance !== 30 || params.customBgHex) && (
                 <div className="pt-1 flex justify-end">
                   <button
                     type="button"
@@ -851,6 +975,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         gridMode: "auto",
                         bgTolerance: 30,
                         flatColors: false,
+                        customBgHex: undefined,
                       });
                     }}
                     className="text-[10px] text-slate-400 hover:text-slate-200 underline cursor-pointer"

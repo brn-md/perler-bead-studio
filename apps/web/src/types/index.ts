@@ -42,6 +42,7 @@ export interface PhysicalParams {
   gridMode?: "auto" | "force" | "off";
   bgTolerance?: number;
   flatColors?: boolean;
+  customBgHex?: string;
 }
 
 export interface BeadColor {
