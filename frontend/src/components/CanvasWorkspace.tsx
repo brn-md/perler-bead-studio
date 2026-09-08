@@ -22,8 +22,10 @@ import {
   Undo2,
   Redo2,
   Printer,
+  ArrowLeftRight,
 } from "lucide-react";
 import { ProcessResponse, PhysicalParams, BrandInfo } from "@/types";
+import { ColorSwapModal } from "./ColorSwapModal";
 
 interface CanvasWorkspaceProps {
   data: ProcessResponse | null;
@@ -64,6 +66,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // Undo / Redo History Stack
   const [history, setHistory] = useState<string[][][]>([]);
   const [historyStep, setHistoryStep] = useState<number>(-1);
+
+  // Color Swapper Modal States
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState<boolean>(false);
+  const [swapSourceHex, setSwapSourceHex] = useState<string | null>(null);
 
   const currentBrandObj =
     brands.find((b) => b.id === (data?.brand || selectedBrand)) || brands[0];
@@ -167,6 +173,47 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     }
   }, [historyStep, history, updateMatrixData]);
 
+  // Color Swapper Handlers
+  const handleOpenSwapModal = useCallback((sourceHex?: string) => {
+    if (!data) return;
+    setSwapSourceHex(
+      sourceHex ||
+        (data.color_counts.length > 0 ? data.color_counts[0].hex : null)
+    );
+    setIsSwapModalOpen(true);
+  }, [data]);
+
+  const handleSwapColors = useCallback(
+    (sourceHex: string, targetHex: string) => {
+      if (!data) return;
+      const sourceUpper = sourceHex.toUpperCase();
+      const targetUpper = targetHex.toUpperCase();
+      if (sourceUpper === targetUpper) return;
+
+      let swapped = 0;
+      const newMatrix = data.matrix.map((row) =>
+        row.map((cell) => {
+          if (cell && cell.toUpperCase() === sourceUpper) {
+            swapped++;
+            return targetUpper;
+          }
+          return cell;
+        })
+      );
+
+      if (swapped > 0) {
+        updateMatrixData(newMatrix, true);
+        if (focusedColor && focusedColor.toUpperCase() === sourceUpper) {
+          setFocusedColor(targetUpper);
+        }
+        if (activeColor && activeColor.toUpperCase() === sourceUpper) {
+          setActiveColor(targetUpper);
+        }
+      }
+    },
+    [data, updateMatrixData, focusedColor, activeColor]
+  );
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -190,11 +237,13 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         setTool("eyedropper");
       } else if (e.key.toLowerCase() === "v") {
         setTool("select");
+      } else if (e.key.toLowerCase() === "r" && !e.ctrlKey && !e.metaKey) {
+        handleOpenSwapModal();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleUndo, handleRedo]);
+  }, [handleUndo, handleRedo, handleOpenSwapModal]);
 
   const getCellFromPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -690,6 +739,18 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               >
                 <Redo2 className="w-3.5 h-3.5" />
               </button>
+
+              <div className="w-[1px] h-4 bg-slate-800 mx-0.5" />
+
+              <button
+                type="button"
+                onClick={() => handleOpenSwapModal()}
+                className="px-2 py-1 text-slate-300 hover:text-white hover:bg-purple-950/60 rounded text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                title="Substituição de Cor em Massa (Atalho: R)"
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5 text-purple-400" />
+                <span className="hidden lg:inline text-[11px]">Trocar Cor</span>
+              </button>
             </div>
           )}
 
@@ -993,6 +1054,15 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 </span>
                 <button
                   type="button"
+                  onClick={() => handleOpenSwapModal(focusedItemInfo.hex)}
+                  className="px-2 py-0.5 rounded bg-purple-900/80 hover:bg-purple-800 border border-purple-500/60 text-purple-200 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors ml-1"
+                  title="Substituir todas as miçangas desta cor"
+                >
+                  <ArrowLeftRight className="w-3 h-3" />
+                  <span>Trocar</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setFocusedColor(null)}
                   className="text-purple-300 hover:text-white ml-1 p-0.5 cursor-pointer"
                   title="Clear focus (Show all colors)"
@@ -1022,16 +1092,15 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               const sym = colorSymbolMap[item.hex.toUpperCase()] || "";
 
               return (
-                <button
+                <div
                   key={item.hex}
-                  type="button"
                   onClick={() => {
                     setActiveColor(item.hex);
                     if (tool === "select") {
                       setFocusedColor(isFocused ? null : item.hex);
                     }
                   }}
-                  className={`flex items-center gap-2 px-2.5 py-1 rounded-md border transition-all shrink-0 cursor-pointer ${
+                  className={`group/chip flex items-center gap-2 px-2.5 py-1 rounded-md border transition-all shrink-0 cursor-pointer ${
                     isFocused
                       ? "bg-purple-950 border-purple-400 ring-2 ring-purple-500/50 shadow-md shadow-purple-950/60"
                       : isBrushActive && tool === "pencil"
@@ -1065,11 +1134,34 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       {item.count} beads
                     </span>
                   </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenSwapModal(item.hex);
+                    }}
+                    className="p-1 rounded hover:bg-white/10 text-slate-500 hover:text-purple-300 transition-colors opacity-70 group-hover/chip:opacity-100 ml-0.5"
+                    title={`Substituir todas as ${item.count} miçangas desta cor...`}
+                  >
+                    <ArrowLeftRight className="w-3 h-3" />
+                  </button>
+                </div>
               );
             })}
           </div>
         </div>
+      )}
+
+      {/* Color Swap Modal */}
+      {data && (
+        <ColorSwapModal
+          isOpen={isSwapModalOpen}
+          onClose={() => setIsSwapModalOpen(false)}
+          initialSourceHex={swapSourceHex}
+          colorCounts={data.color_counts}
+          brand={currentBrandObj}
+          onSwap={handleSwapColors}
+        />
       )}
     </div>
   );
