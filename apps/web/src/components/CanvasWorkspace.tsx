@@ -795,8 +795,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const activeColorInfo = brandLookup[activeColor.toUpperCase()];
 
   return (
-    <div className="flex-1 h-screen flex flex-col bg-slate-950 relative overflow-hidden">
-      {/* Top Main Toolbar */}
+    <div className="flex-1 h-full min-h-0 flex flex-col bg-slate-950 relative overflow-hidden">
       {/* Top Main Toolbar */}
       <header className="h-14 border-b border-slate-800 bg-slate-900/90 backdrop-blur px-4 flex items-center justify-between gap-3 z-10 shrink-0 min-w-0 select-none">
         {/* LEFT SECTION: Zoom & Edit Tools */}

@@ -83,7 +83,7 @@ export const AdvancedProcessingSection: React.FC<AdvancedProcessingSectionProps>
             onClick={() => {
               onParamsChange({
                 ...params,
-                gridMode: "force",
+                gridMode: "auto",
                 flatColors: true,
                 bgTolerance: 18,
                 decodeCellCodes: false,
@@ -91,7 +91,7 @@ export const AdvancedProcessingSection: React.FC<AdvancedProcessingSectionProps>
               });
             }}
             className={`w-full p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-              params.gridMode === "force" && params.flatColors
+              params.flatColors && !params.decodeCellCodes
                 ? "bg-indigo-950/70 border-indigo-500 text-indigo-200 shadow-sm"
                 : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-900"
             }`}
@@ -101,7 +101,7 @@ export const AdvancedProcessingSection: React.FC<AdvancedProcessingSectionProps>
                 <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Otimizar Pixel Art & Fundo Colorido</span>
               </span>
-              {params.gridMode === "force" && params.flatColors && (
+              {params.flatColors && !params.decodeCellCodes && (
                 <Check className="w-3.5 h-3.5 text-indigo-400" />
               )}
             </div>

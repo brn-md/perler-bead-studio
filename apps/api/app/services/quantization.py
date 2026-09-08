@@ -1,4 +1,4 @@
-﻿"""
+"""
 Quantization Service Module (app/services/quantization.py)
 ---------------------------------------------------------
 Contains mathematical algorithms for color reduction and matching:
@@ -120,6 +120,72 @@ def quantize_cielab(
     ]
 
     # Build 2D matrix of hex colors
+    matrix_hex: List[List[str]] = []
+    for r in range(h):
+        row_hex = []
+        for col in range(w):
+            idx = closest_indices[r * w + col]
+            hx = palette_hex[idx].upper()
+            if not hx.startswith("#"):
+                hx = "#" + hx
+            row_hex.append(hx)
+        matrix_hex.append(row_hex)
+
+    return quantized_image, color_counts, matrix_hex
+
+
+def quantize_ciede2000(
+    image_rgb: np.ndarray,
+    palette_hex: List[str]
+) -> Tuple[np.ndarray, List[Dict[str, Any]], List[List[str]]]:
+    """
+    Maps each pixel to the nearest palette color using the CIEDE2000 color difference formula.
+    Provides standard-grade perceptual color matching, eliminating hue shifts
+    (e.g., yellows turning green/brown or whites turning grey).
+    """
+    from skimage.color import deltaE_ciede2000
+
+    h, w, _ = image_rgb.shape
+
+    # 1. Convert palette to RGB and CIELAB
+    palette_rgb_list = [hex_to_rgb(hx) for hx in palette_hex]
+    palette_rgb_arr = np.array(palette_rgb_list, dtype=np.float32) / 255.0
+    palette_lab = rgb2lab(palette_rgb_arr.reshape(-1, 1, 3)).reshape(-1, 3)
+
+    # 2. Convert input image to CIELAB space
+    img_rgb_norm = image_rgb.astype(np.float32) / 255.0
+    img_lab = rgb2lab(img_rgb_norm).reshape(-1, 1, 3)  # Shape: (H * W, 1, 3)
+
+    n_pixels = h * w
+    n_colors = len(palette_hex)
+
+    # 3. Vectorized CIEDE2000 computation across palette entries
+    distances = np.zeros((n_pixels, n_colors), dtype=np.float32)
+    for j in range(n_colors):
+        color_j = palette_lab[j:j+1, :].reshape(1, 1, 3)
+        distances[:, j] = deltaE_ciede2000(img_lab, color_j).flatten()
+
+    closest_indices = np.argmin(distances, axis=1)
+
+    palette_rgb_uint8 = np.array(palette_rgb_list, dtype=np.uint8)
+    mapped_pixels = palette_rgb_uint8[closest_indices]
+    quantized_image = mapped_pixels.reshape(h, w, 3)
+
+    # 4. Compute color frequency counts
+    unique_indices, counts = np.unique(closest_indices, return_counts=True)
+    color_counts_map: Dict[str, int] = {}
+    for idx, count in zip(unique_indices, counts):
+        hex_code = palette_hex[idx].upper()
+        if not hex_code.startswith("#"):
+            hex_code = "#" + hex_code
+        color_counts_map[hex_code] = color_counts_map.get(hex_code, 0) + int(count)
+
+    color_counts = [
+        {"hex": hex_code, "count": count}
+        for hex_code, count in sorted(color_counts_map.items(), key=lambda x: x[1], reverse=True)
+    ]
+
+    # 5. Build 2D matrix of hex colors
     matrix_hex: List[List[str]] = []
     for r in range(h):
         row_hex = []
