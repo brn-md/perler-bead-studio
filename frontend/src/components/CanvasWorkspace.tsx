@@ -174,14 +174,40 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   }, [historyStep, history, updateMatrixData]);
 
   // Color Swapper Handlers
-  const handleOpenSwapModal = useCallback((sourceHex?: string) => {
-    if (!data) return;
-    setSwapSourceHex(
-      sourceHex ||
-        (data.color_counts.length > 0 ? data.color_counts[0].hex : null)
-    );
-    setIsSwapModalOpen(true);
-  }, [data]);
+  const handleOpenSwapModal = useCallback(
+    (sourceHex?: string) => {
+      if (!data || data.color_counts.length === 0) return;
+
+      let chosen: string = data.color_counts[0].hex;
+
+      if (
+        sourceHex &&
+        data.color_counts.some(
+          (c) => c.hex.toUpperCase() === sourceHex.toUpperCase()
+        )
+      ) {
+        chosen = sourceHex;
+      } else if (
+        focusedColor &&
+        data.color_counts.some(
+          (c) => c.hex.toUpperCase() === focusedColor.toUpperCase()
+        )
+      ) {
+        chosen = focusedColor;
+      } else if (
+        activeColor &&
+        data.color_counts.some(
+          (c) => c.hex.toUpperCase() === activeColor.toUpperCase()
+        )
+      ) {
+        chosen = activeColor;
+      }
+
+      setSwapSourceHex(chosen);
+      setIsSwapModalOpen(true);
+    },
+    [data, focusedColor, activeColor]
+  );
 
   const handleSwapColors = useCallback(
     (sourceHex: string, targetHex: string) => {
@@ -290,9 +316,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       }
     } else if (tool === "select" && isInitialClick) {
       if (currentVal && currentVal !== "TRANSPARENT") {
+        const upper = currentVal.toUpperCase();
         setFocusedColor(
-          focusedColor?.toUpperCase() === currentVal.toUpperCase() ? null : currentVal
+          focusedColor?.toUpperCase() === upper ? null : upper
         );
+        setActiveColor(upper);
       }
     }
   };
@@ -979,6 +1007,17 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 setIsPointerDown(false);
                 setHoveredCell(null);
               }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                const cell = getCellFromPointer(e as any);
+                if (cell && data) {
+                  const val = data.matrix[cell.r][cell.c];
+                  if (val && val !== "TRANSPARENT") {
+                    setActiveColor(val.toUpperCase());
+                    handleOpenSwapModal(val);
+                  }
+                }
+              }}
               className={`block ${
                 tool === "pencil" || tool === "eraser"
                   ? "cursor-crosshair"
@@ -1096,9 +1135,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   key={item.hex}
                   onClick={() => {
                     setActiveColor(item.hex);
-                    if (tool === "select") {
-                      setFocusedColor(isFocused ? null : item.hex);
-                    }
+                    setFocusedColor(isFocused ? null : item.hex);
                   }}
                   className={`group/chip flex items-center gap-2 px-2.5 py-1 rounded-md border transition-all shrink-0 cursor-pointer ${
                     isFocused
