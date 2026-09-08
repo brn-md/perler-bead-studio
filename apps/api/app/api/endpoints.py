@@ -25,6 +25,7 @@ from app.services.image_processor import process_pixel_art
 from app.services.pdf_generator import generate_bead_pdf
 from app.core.brands import get_all_brands_summary, get_brand_data, BRANDS_CATALOG
 from app.core.color_utils import hex_to_rgb, rgb_to_hex
+from app.core.action_logger import record_action
 
 router = APIRouter(prefix="/api", tags=["Pixel Art Processing"])
 
@@ -157,8 +158,31 @@ async def process_image_endpoint(
                 detail=f"Invalid JSON string in palette_hex: {str(e)}"
             )
 
+    # Prepare parameters dictionary for action logger
+    params_dict = {
+        "width_cm": width_cm,
+        "height_cm": height_cm,
+        "bead_size_cm": bead_size_cm,
+        "brand": brand or "perler",
+        "k_colors": k_colors,
+        "enhance_edges": enhance_edges,
+        "isolate_subject": isolate_subject,
+        "background_mode": background_mode or "cutout",
+        "grid_mode": grid_mode or "auto",
+        "bg_tolerance": bg_tolerance,
+        "flat_colors": flat_colors,
+        "custom_bg_hex": custom_bg_hex,
+        "decode_cell_codes": decode_cell_codes,
+        "sample_corners_bg": sample_corners_bg,
+        "detect_red_dividers": detect_red_dividers,
+    }
+
     try:
         contents = await file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        img_temp = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        img_shape = img_temp.shape if img_temp is not None else (0, 0, 0)
+
         result = process_pixel_art(
             image_bytes=contents,
             width_cm=width_cm,
@@ -182,10 +206,13 @@ async def process_image_endpoint(
             sample_corners_bg=bool(sample_corners_bg),
             detect_red_dividers=bool(detect_red_dividers)
         )
+        record_action(file.filename or "uploaded_image", img_shape, params_dict, result=result)
         return result
     except ValueError as ve:
+        record_action(file.filename or "uploaded_image", (0, 0, 0), params_dict, error=str(ve))
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as exc:
+        record_action(file.filename or "uploaded_image", (0, 0, 0), params_dict, error=str(exc))
         raise HTTPException(status_code=500, detail=f"Image processing error: {str(exc)}")
 
 

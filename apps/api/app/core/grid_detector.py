@@ -215,24 +215,55 @@ def detect_annotated_chart(
             if is_colored or has_text_code:
                 is_bead[r, c] = True
 
-    # Floodfill empty cells from the outside borders (or 4 corners if sample_corners_bg is True)
-    mask = np.zeros((rows + 2, cols + 2), dtype=np.uint8)
+    # Detect and drop coordinate ruler rows (e.g. gray bar with numbers along top/bottom)
+    top_ruler_r = None
+    for r in range(0, min(5, rows // 2)):
+        ruler_cells = sum(
+            1 for c in range(cols)
+            if (max(sampled_rgb[r, c]) - min(sampled_rgb[r, c])) <= 8
+            and 175 <= np.mean(sampled_rgb[r, c]) <= 238
+        )
+        if ruler_cells >= cols * 0.55:
+            top_ruler_r = r
+
+    if top_ruler_r is not None:
+        sampled_rgb = sampled_rgb[top_ruler_r + 1:]
+        is_bead = is_bead[top_ruler_r + 1:]
+        rows = sampled_rgb.shape[0]
+
+    bottom_ruler_r = None
+    for r in range(rows - 1, max(0, rows // 2), -1):
+        ruler_cells = sum(
+            1 for c in range(cols)
+            if (max(sampled_rgb[r, c]) - min(sampled_rgb[r, c])) <= 8
+            and 175 <= np.mean(sampled_rgb[r, c]) <= 238
+        )
+        if ruler_cells >= cols * 0.55:
+            bottom_ruler_r = r
+            break
+
+    if bottom_ruler_r is not None:
+        sampled_rgb = sampled_rgb[:bottom_ruler_r]
+        is_bead = is_bead[:bottom_ruler_r]
+        rows = sampled_rgb.shape[0]
+
+    # Floodfill empty cells from perimeter using None mask to avoid OpenCV boundary caching
     empty_map = (~is_bead).astype(np.uint8)
 
     if sample_corners_bg:
         corners = [(0, 0), (cols - 1, 0), (0, rows - 1), (cols - 1, rows - 1)]
         for c, r in corners:
-            if empty_map[r, c] == 1:
-                cv2.floodFill(empty_map, mask, (c, r), 2)
+            if 0 <= r < rows and 0 <= c < cols and empty_map[r, c] == 1:
+                cv2.floodFill(empty_map, None, (c, r), 2)
     else:
         for r in range(rows):
             for c in [0, cols - 1]:
                 if empty_map[r, c] == 1:
-                    cv2.floodFill(empty_map, mask, (c, r), 2)
+                    cv2.floodFill(empty_map, None, (c, r), 2)
         for c in range(cols):
             for r in [0, rows - 1]:
                 if empty_map[r, c] == 1:
-                    cv2.floodFill(empty_map, mask, (c, r), 2)
+                    cv2.floodFill(empty_map, None, (c, r), 2)
 
     char_mask = (empty_map != 2).astype(np.uint8)
 
@@ -245,7 +276,7 @@ def detect_annotated_chart(
             area = stats[lbl, cv2.CC_STAT_AREA]
             comp_h = stats[lbl, cv2.CC_STAT_HEIGHT]
             comp_w = stats[lbl, cv2.CC_STAT_WIDTH]
-            if area >= max(16, int(max_area * 0.025)):
+            if area >= max(12, int(max_area * 0.02)):
                 if not (comp_h <= 2 and comp_w > cols * 0.4):
                     final_mask[labels == lbl] = 255
 
