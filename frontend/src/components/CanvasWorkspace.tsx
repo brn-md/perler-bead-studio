@@ -431,24 +431,26 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       }
     }
 
-    // 3. Faint Grid
-    ctx.strokeStyle = "#E2E8F0";
-    ctx.lineWidth = 1;
+    // 3. Faint Grid (Disabled in Melted View for authentic physical art appearance)
+    if (viewMode !== "melted") {
+      ctx.strokeStyle = "#E2E8F0";
+      ctx.lineWidth = 1;
 
-    for (let c = 0; c <= cols; c++) {
-      const x = rulerOffset + c * beadCellPx;
-      ctx.beginPath();
-      ctx.moveTo(x, rulerOffset);
-      ctx.lineTo(x, renderHeight);
-      ctx.stroke();
-    }
+      for (let c = 0; c <= cols; c++) {
+        const x = rulerOffset + c * beadCellPx;
+        ctx.beginPath();
+        ctx.moveTo(x, rulerOffset);
+        ctx.lineTo(x, renderHeight);
+        ctx.stroke();
+      }
 
-    for (let r = 0; r <= rows; r++) {
-      const y = rulerOffset + r * beadCellPx;
-      ctx.beginPath();
-      ctx.moveTo(rulerOffset, y);
-      ctx.lineTo(renderWidth, y);
-      ctx.stroke();
+      for (let r = 0; r <= rows; r++) {
+        const y = rulerOffset + r * beadCellPx;
+        ctx.beginPath();
+        ctx.moveTo(rulerOffset, y);
+        ctx.lineTo(renderWidth, y);
+        ctx.stroke();
+      }
     }
 
     // 4. Render Perler Beads Matrix
@@ -516,63 +518,117 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           }
         } else if (viewMode === "melted") {
           // Melted / Ironed Simulation:
-          // Beads have softened under heat, fusing together with tight seams
-          const tilePad = 0.5;
-          const tileSize = beadCellPx - tilePad * 2;
-          const cornerR = 3.6;
+          // In real life (like photo media_1788821283364.png), neighboring beads fuse seamlessly!
+          // Only outer edges touching air/transparent have rounded curves.
+          const isFilled = (nr: number, nc: number) => {
+            if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) return false;
+            const val = matrix[nr]?.[nc];
+            return Boolean(val && val !== "TRANSPARENT");
+          };
 
-          // Main fused plastic body
+          const top = isFilled(r - 1, c);
+          const bottom = isFilled(r + 1, c);
+          const left = isFilled(r, c - 1);
+          const right = isFilled(r, c + 1);
+
+          // Outer scalloped corner radius (0 if fused into neighbor, outerR if edge)
+          const outerR = beadCellPx * 0.44;
+          const tl = top && left ? 0 : outerR;
+          const tr = top && right ? 0 : outerR;
+          const br = bottom && right ? 0 : outerR;
+          const bl = bottom && left ? 0 : outerR;
+
+          // 1. Fused solid plastic body
           ctx.fillStyle = hex;
           ctx.beginPath();
           if ((ctx as any).roundRect) {
-            (ctx as any).roundRect(x + tilePad, y + tilePad, tileSize, tileSize, cornerR);
+            (ctx as any).roundRect(x, y, beadCellPx, beadCellPx, [tl, tr, br, bl]);
           } else {
-            ctx.rect(x + tilePad, y + tilePad, tileSize, tileSize);
+            ctx.rect(x, y, beadCellPx, beadCellPx);
           }
           ctx.fill();
 
-          // Soft iron thermal highlight across top (gloss finish)
-          ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
+          // 2. Heat-pressed surface shine (subtle satin gradient across top)
+          const shineGrad = ctx.createLinearGradient(x, y, x + beadCellPx, y + beadCellPx);
+          shineGrad.addColorStop(0, "rgba(255, 255, 255, 0.16)");
+          shineGrad.addColorStop(0.45, "rgba(255, 255, 255, 0.02)");
+          shineGrad.addColorStop(1, "rgba(0, 0, 0, 0.08)");
+          ctx.fillStyle = shineGrad;
           ctx.beginPath();
           if ((ctx as any).roundRect) {
-            (ctx as any).roundRect(x + tilePad + 1, y + tilePad + 1, tileSize * 0.62, tileSize * 0.42, cornerR * 0.7);
+            (ctx as any).roundRect(x, y, beadCellPx, beadCellPx, [tl, tr, br, bl]);
           } else {
-            ctx.rect(x + tilePad + 1, y + tilePad + 1, tileSize * 0.62, tileSize * 0.42);
+            ctx.rect(x, y, beadCellPx, beadCellPx);
           }
           ctx.fill();
 
-          // Fused seam line border
-          ctx.strokeStyle = "rgba(0, 0, 0, 0.18)";
-          ctx.lineWidth = 0.75;
-          ctx.beginPath();
-          if ((ctx as any).roundRect) {
-            (ctx as any).roundRect(x + tilePad, y + tilePad, tileSize, tileSize, cornerR);
-          } else {
-            ctx.rect(x + tilePad, y + tilePad, tileSize, tileSize);
+          // 3. Faint seam crease where beads meet
+          if (right) {
+            ctx.strokeStyle = "rgba(0, 0, 0, 0.09)";
+            ctx.lineWidth = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(x + beadCellPx, y + 1);
+            ctx.lineTo(x + beadCellPx, y + beadCellPx - 1);
+            ctx.stroke();
           }
-          ctx.stroke();
-
-          // Melted center pinhole
-          if (meltStyle === "standard") {
-            const meltedHoleR = 1.8;
-            ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+          if (bottom) {
+            ctx.strokeStyle = "rgba(0, 0, 0, 0.09)";
+            ctx.lineWidth = 0.6;
             ctx.beginPath();
-            ctx.arc(cx, cy, meltedHoleR, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.arc(cx, cy, meltedHoleR, 0, Math.PI * 2);
+            ctx.moveTo(x + 1, y + beadCellPx);
+            ctx.lineTo(x + beadCellPx - 1, y + beadCellPx);
             ctx.stroke();
           }
 
+          // 4. Outer scalloped contour border
+          ctx.strokeStyle = "rgba(0, 0, 0, 0.22)";
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          if ((ctx as any).roundRect) {
+            (ctx as any).roundRect(x, y, beadCellPx, beadCellPx, [tl, tr, br, bl]);
+          } else {
+            ctx.rect(x, y, beadCellPx, beadCellPx);
+          }
+          ctx.stroke();
+
+          // 5. Authentic Melted Pinhole Dimple in center (like real Hello Kitty craft!)
+          if (meltStyle === "standard") {
+            // Soft outer indentation
+            const dimpleR = beadCellPx * 0.13;
+            ctx.fillStyle = "rgba(0, 0, 0, 0.14)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, dimpleR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Dark melted hole core
+            const holeR = beadCellPx * 0.075;
+            ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, holeR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Subtle highlight on the upper rim of the pinhole
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+            ctx.lineWidth = 0.6;
+            ctx.beginPath();
+            ctx.arc(cx, cy, holeR + 0.5, -Math.PI * 0.8, -Math.PI * 0.1);
+            ctx.stroke();
+          } else {
+            // 100% Flat Melt (fully closed, faint center dimple)
+            const dimpleR = beadCellPx * 0.07;
+            ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, dimpleR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Focus indicator in melted view
           if (focusedColor && isMatch) {
             ctx.strokeStyle = "#F59E0B";
-            ctx.lineWidth = 2.0;
+            ctx.lineWidth = 2.5;
             ctx.beginPath();
             if ((ctx as any).roundRect) {
-              (ctx as any).roundRect(x, y, beadCellPx, beadCellPx, cornerR + 1);
+              (ctx as any).roundRect(x - 0.5, y - 0.5, beadCellPx + 1, beadCellPx + 1, [tl, tr, br, bl]);
             } else {
               ctx.strokeRect(x, y, beadCellPx, beadCellPx);
             }
@@ -616,28 +672,30 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       ctx.restore();
     }
 
-    // 6. Grid line every 5
-    ctx.strokeStyle = "rgba(100, 116, 139, 0.4)";
-    ctx.lineWidth = 1.8;
+    // 6. Grid line every 5 (Disabled in Melted View)
+    if (viewMode !== "melted") {
+      ctx.strokeStyle = "rgba(100, 116, 139, 0.4)";
+      ctx.lineWidth = 1.8;
 
-    for (let c = 0; c <= cols; c += 5) {
-      const x = rulerOffset + c * beadCellPx;
-      ctx.beginPath();
-      ctx.moveTo(x, rulerOffset);
-      ctx.lineTo(x, renderHeight);
-      ctx.stroke();
+      for (let c = 0; c <= cols; c += 5) {
+        const x = rulerOffset + c * beadCellPx;
+        ctx.beginPath();
+        ctx.moveTo(x, rulerOffset);
+        ctx.lineTo(x, renderHeight);
+        ctx.stroke();
+      }
+
+      for (let r = 0; r <= rows; r += 5) {
+        const y = rulerOffset + r * beadCellPx;
+        ctx.beginPath();
+        ctx.moveTo(rulerOffset, y);
+        ctx.lineTo(renderWidth, y);
+        ctx.stroke();
+      }
     }
 
-    for (let r = 0; r <= rows; r += 5) {
-      const y = rulerOffset + r * beadCellPx;
-      ctx.beginPath();
-      ctx.moveTo(rulerOffset, y);
-      ctx.lineTo(renderWidth, y);
-      ctx.stroke();
-    }
-
-    // 7. Pegboard Modular Lines
-    if (showPegboard && params.pegboardSizeCm > 0) {
+    // 7. Pegboard Modular Lines (Disabled in Melted View)
+    if (showPegboard && params.pegboardSizeCm > 0 && viewMode !== "melted") {
       const beadsPerPegboard = params.pegboardSizeCm / params.beadSizeCm;
       const pegboardIntervalPx = beadsPerPegboard * beadCellPx;
 
@@ -1097,7 +1155,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       {/* Main Canvas Viewport */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto flex items-center justify-center p-8 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]"
+        className={`flex-1 overflow-auto flex items-center justify-center p-8 transition-colors ${
+          viewMode === "melted"
+            ? "bg-[#090d16]"
+            : "bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]"
+        }`}
       >
         {data ? (
           <div
@@ -1106,7 +1168,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               transformOrigin: "center center",
               transition: "transform 0.1s ease-out",
             }}
-            className="shadow-2xl rounded-sm border-2 border-slate-700 bg-white select-none p-1.5"
+            className={`rounded-sm select-none p-1.5 transition-all ${
+              viewMode === "melted"
+                ? "shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-amber-900/30 bg-slate-900/90"
+                : "shadow-2xl border-2 border-slate-700 bg-white"
+            }`}
           >
             <canvas
               ref={canvasRef}
