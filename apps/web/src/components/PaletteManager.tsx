@@ -73,7 +73,7 @@ export const PaletteManager: React.FC<PaletteManagerProps> = ({
       formData.append("brand", selectedBrand);
       formData.append("max_colors", "10");
 
-      const res = await fetch("http://localhost:8000/api/extract-palette", {
+      const res = await fetch("/api/extract-palette", {
         method: "POST",
         body: formData,
       });

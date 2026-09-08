@@ -38,7 +38,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchBrands() {
       try {
-        const res = await fetch("http://localhost:8000/api/brands");
+        const res = await fetch("/api/brands");
         if (res.ok) {
           const data = await res.json();
           if (data.brands && data.brands.length > 0) {
@@ -84,7 +84,7 @@ export default function Home() {
         formData.append("palette_hex", JSON.stringify(palette));
       }
 
-      const response = await fetch("http://localhost:8000/api/process", {
+      const response = await fetch("/api/process", {
         method: "POST",
         body: formData,
       });

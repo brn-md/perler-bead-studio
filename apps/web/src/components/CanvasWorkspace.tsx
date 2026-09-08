@@ -753,7 +753,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         pegboard_size_cm: params.pegboardSizeCm || 14.5,
       };
 
-      const res = await fetch("http://localhost:8000/api/export-pdf", {
+      const res = await fetch("/api/export-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
