@@ -129,7 +129,8 @@ async def process_image_endpoint(
     crop_w: Optional[float] = Form(1.0, description="Relative crop width (0.0 to 1.0)"),
     crop_h: Optional[float] = Form(1.0, description="Relative crop height (0.0 to 1.0)"),
     enhance_edges: Optional[bool] = Form(True, description="Enable bead hole filling and edge enhancement"),
-    isolate_subject: Optional[bool] = Form(True, description="Automatically remove background fabric/table")
+    isolate_subject: Optional[bool] = Form(True, description="Automatically remove background fabric/table"),
+    background_mode: Optional[str] = Form("cutout", description="Background mode: 'cutout' (transparent silhouette) or 'solid' (fill plate with beads)")
 ):
     if width_cm <= 0 or height_cm <= 0 or bead_size_cm <= 0:
         raise HTTPException(
@@ -164,7 +165,8 @@ async def process_image_endpoint(
             crop_w=crop_w,
             crop_h=crop_h,
             enhance_edges=enhance_edges,
-            isolate_subject=isolate_subject
+            isolate_subject=isolate_subject,
+            background_mode=background_mode or "cutout"
         )
         return result
     except ValueError as ve:

@@ -310,6 +310,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
             />
           </div>
 
+          {/* Background Mode: Cutout (Silhouette) vs Solid (Plate) */}
+          <div className="pt-1">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[11px] font-medium text-slate-400">
+                Background Mode
+              </label>
+              <span className="text-[10px] text-slate-500 font-mono">
+                {params.backgroundMode === "cutout" ? "Silhouette" : "Full Plate"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleInputChange("backgroundMode", "cutout")}
+                className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  params.backgroundMode === "cutout"
+                    ? "bg-purple-950 border-purple-600 text-purple-200 font-semibold shadow-sm"
+                    : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                }`}
+                title="Transparent outer background: generates only character silhouette beads"
+              >
+                <span>✂ Cutout</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInputChange("backgroundMode", "solid")}
+                className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  params.backgroundMode === "solid"
+                    ? "bg-purple-950 border-purple-600 text-purple-200 font-semibold shadow-sm"
+                    : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                }`}
+                title="Solid background plate: fills entire rectangular pegboard with beads (coasters, frames)"
+              >
+                <span>▦ Solid Plate</span>
+              </button>
+            </div>
+          </div>
+
           {/* Result Specs Summary */}
           <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
             <div className="flex items-center justify-between">

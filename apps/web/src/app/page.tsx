@@ -24,6 +24,7 @@ export default function Home() {
     cropW: 1.0,
     cropH: 1.0,
     enhanceEdges: true,
+    backgroundMode: "cutout",
   });
 
   const [brands, setBrands] = useState<BrandInfo[]>(DEFAULT_BRANDS);
@@ -79,6 +80,7 @@ export default function Home() {
       formData.append("crop_h", params.cropH.toString());
       formData.append("enhance_edges", params.enhanceEdges ? "true" : "false");
       formData.append("isolate_subject", "true");
+      formData.append("background_mode", params.backgroundMode);
 
       if (palette.length > 0) {
         formData.append("palette_hex", JSON.stringify(palette));

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Image Processing Pipeline Service (app/services/image_processor.py)
 -------------------------------------------------------------------
 Universal Bead Art Scaling & Digitizing Engine:
@@ -72,7 +72,8 @@ def process_pixel_art(
     crop_w: Optional[float] = 1.0,
     crop_h: Optional[float] = 1.0,
     enhance_edges: bool = True,
-    isolate_subject: bool = True
+    isolate_subject: bool = True,
+    background_mode: str = "cutout"
 ) -> Dict[str, Any]:
     nparr = np.frombuffer(image_bytes, np.uint8)
     img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -93,7 +94,7 @@ def process_pixel_art(
     target_cols = max(1, int(round(width_cm / bead_size_cm)))
     target_rows = max(1, int(round(height_cm / bead_size_cm)))
 
-    # 1. Check if the image is an existing bead grid template (like the dog)
+    # 1. Check if the image is an existing bead grid template (like the dog or mario)
     grid_result = detect_and_sample_grid_template(img_bgr)
     if grid_result is not None:
         craft_rgb, craft_mask = grid_result
@@ -131,10 +132,12 @@ def process_pixel_art(
     quantized_img, color_counts, matrix_hex = quantize_cielab(canvas_rgb, active_palette)
     algorithm_used = f"cielab_{brand_data['id']}"
 
-    for r in range(target_rows):
-        for c in range(target_cols):
-            if canvas_mask[r, c] == 0:
-                matrix_hex[r][c] = "TRANSPARENT"
+    # In cutout mode, outer canvas area without craft becomes transparent
+    if background_mode == "cutout":
+        for r in range(target_rows):
+            for c in range(target_cols):
+                if canvas_mask[r, c] == 0:
+                    matrix_hex[r][c] = "TRANSPARENT"
 
     # Count beads with manufacturer catalog metadata
     filtered_counts = {}

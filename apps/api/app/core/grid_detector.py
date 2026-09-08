@@ -1,4 +1,4 @@
-﻿"""
+"""
 Automatic Grid Template Extractor (app/core/grid_detector.py)
 -------------------------------------------------------------
 Detects if an image already has a bead grid drawn on it,
@@ -65,15 +65,26 @@ def detect_and_sample_grid_template(img_bgr: np.ndarray) -> Optional[Tuple[np.nd
                 b, g, r_val = np.median(patch.reshape(-1, 3), axis=0)
                 grid_rgb[r, c] = [int(r_val), int(g), int(b)]
 
-    # Detect character vs outer white background using floodfill
-    # In templates, outer background is white cells connected to the edges
+    # Detect character vs outer white background using multi-edge floodfill
+    # In templates, outer background is white cells connected to ANY outer edge
     grid_gray = cv2.cvtColor(grid_rgb, cv2.COLOR_RGB2GRAY)
-    is_white = (grid_gray > 230).astype(np.uint8)
+    is_white = (grid_gray > 220).astype(np.uint8)
 
-    # Floodfill outer white from corners
+    # Floodfill outer white from ALL 4 perimeter edges
     flood_mask = np.zeros((rows + 2, cols + 2), dtype=np.uint8)
     temp = is_white.copy() * 255
-    cv2.floodFill(temp, flood_mask, (0, 0), 100)
+
+    for c in range(cols):
+        if is_white[0, c] and temp[0, c] == 255:
+            cv2.floodFill(temp, flood_mask, (c, 0), 100)
+        if is_white[rows - 1, c] and temp[rows - 1, c] == 255:
+            cv2.floodFill(temp, flood_mask, (c, rows - 1), 100)
+
+    for r in range(rows):
+        if is_white[r, 0] and temp[r, 0] == 255:
+            cv2.floodFill(temp, flood_mask, (0, r), 100)
+        if is_white[r, cols - 1] and temp[r, cols - 1] == 255:
+            cv2.floodFill(temp, flood_mask, (cols - 1, r), 100)
 
     outer_bg = (temp == 100)
     character_mask = (~outer_bg).astype(np.uint8)
