@@ -44,6 +44,8 @@ export interface PhysicalParams {
   flatColors?: boolean;
   customBgHex?: string;
   decodeCellCodes?: boolean;
+  sampleCornersBg?: boolean;
+  detectRedDividers?: boolean;
 }
 
 export interface BeadColor {

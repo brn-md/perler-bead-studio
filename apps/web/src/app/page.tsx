@@ -29,6 +29,8 @@ export default function Home() {
     bgTolerance: 30,
     flatColors: false,
     decodeCellCodes: false,
+    sampleCornersBg: false,
+    detectRedDividers: false,
   });
 
   const [brands, setBrands] = useState<BrandInfo[]>(DEFAULT_BRANDS);
@@ -89,6 +91,8 @@ export default function Home() {
       formData.append("bg_tolerance", (params.bgTolerance ?? 30).toString());
       formData.append("flat_colors", params.flatColors ? "true" : "false");
       formData.append("decode_cell_codes", params.decodeCellCodes ? "true" : "false");
+      formData.append("sample_corners_bg", params.sampleCornersBg ? "true" : "false");
+      formData.append("detect_red_dividers", params.detectRedDividers ? "true" : "false");
       if (params.customBgHex) {
         formData.append("custom_bg_hex", params.customBgHex);
       }

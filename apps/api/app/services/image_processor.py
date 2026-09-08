@@ -82,7 +82,9 @@ def process_pixel_art(
     bg_tolerance: float = 30.0,
     flat_colors: bool = False,
     custom_bg_hex: Optional[str] = None,
-    decode_cell_codes: bool = False
+    decode_cell_codes: bool = False,
+    sample_corners_bg: bool = False,
+    detect_red_dividers: bool = False
 ) -> Dict[str, Any]:
     nparr = np.frombuffer(image_bytes, np.uint8)
     img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -110,7 +112,13 @@ def process_pixel_art(
     grid_result = None
     if decode_cell_codes:
         # User explicitly enabled chart mode for prints with rulers & cell letter codes (C3, R15)
-        grid_result = detect_annotated_chart(img_bgr, custom_bg_hex=custom_bg_hex, bg_tolerance=bg_tolerance)
+        grid_result = detect_annotated_chart(
+            img_bgr,
+            custom_bg_hex=custom_bg_hex,
+            bg_tolerance=bg_tolerance,
+            sample_corners_bg=sample_corners_bg,
+            detect_red_dividers=detect_red_dividers
+        )
 
     if grid_result is None and grid_mode != "off":
         force = (grid_mode == "force")
@@ -118,7 +126,9 @@ def process_pixel_art(
             img_bgr,
             force_grid=force,
             bg_tolerance=bg_tolerance,
-            custom_bg_hex=custom_bg_hex
+            custom_bg_hex=custom_bg_hex,
+            sample_corners_bg=sample_corners_bg,
+            detect_red_dividers=detect_red_dividers
         )
 
     if grid_result is not None:
