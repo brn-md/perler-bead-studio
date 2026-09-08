@@ -795,18 +795,20 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   return (
     <div className="flex-1 h-screen flex flex-col bg-slate-950 relative overflow-hidden">
       {/* Top Main Toolbar */}
-      <header className="h-14 border-b border-slate-800 bg-slate-900/70 backdrop-blur px-6 flex items-center justify-between z-10">
-        <div className="flex items-center space-x-3">
+      {/* Top Main Toolbar */}
+      <header className="h-14 border-b border-slate-800 bg-slate-900/90 backdrop-blur px-4 flex items-center justify-between gap-3 z-10 shrink-0 min-w-0 select-none">
+        {/* LEFT SECTION: Zoom & Edit Tools */}
+        <div className="flex items-center gap-2 shrink-0">
           {/* Zoom controls */}
-          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1">
+          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1 shrink-0">
             <button
               onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))}
               className="p-1.5 text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
               title="Zoom Out"
             >
-              <ZoomOut className="w-4 h-4" />
+              <ZoomOut className="w-3.5 h-3.5" />
             </button>
-            <span className="text-xs font-mono text-slate-300 px-2 min-w-[3.5rem] text-center">
+            <span className="text-xs font-mono text-slate-300 px-1.5 min-w-[3rem] text-center select-none whitespace-nowrap">
               {Math.round(zoom * 100)}%
             </span>
             <button
@@ -814,20 +816,20 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               className="p-1.5 text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
               title="Zoom In"
             >
-              <ZoomIn className="w-4 h-4" />
+              <ZoomIn className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setZoom(1)}
-              className="p-1.5 text-slate-400 hover:text-white rounded border-l border-slate-800 transition-colors ml-1 cursor-pointer"
-              title="Reset Zoom"
+              className="p-1.5 text-slate-400 hover:text-white rounded border-l border-slate-800/80 transition-colors ml-0.5 cursor-pointer"
+              title="Reset Zoom (100%)"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* EDIT TOOLS: Select, Pencil, Eraser, Eyedropper, Undo, Redo */}
+          {/* EDIT TOOLS: Select, Pencil, Eraser, Eyedropper, Undo, Redo, Swap */}
           {data && (
-            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1 gap-1">
+            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1 gap-0.5 shrink-0">
               <button
                 onClick={() => setTool("select")}
                 className={`p-1.5 rounded transition-colors cursor-pointer flex items-center gap-1 text-xs font-medium ${
@@ -873,7 +875,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 <Pipette className="w-3.5 h-3.5" />
               </button>
 
-              <div className="w-[1px] h-4 bg-slate-800 mx-0.5" />
+              <div className="w-[1px] h-4 bg-slate-800 mx-0.5 shrink-0" />
 
               <button
                 onClick={handleUndo}
@@ -892,41 +894,46 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 <Redo2 className="w-3.5 h-3.5" />
               </button>
 
-              <div className="w-[1px] h-4 bg-slate-800 mx-0.5" />
+              <div className="w-[1px] h-4 bg-slate-800 mx-0.5 shrink-0" />
 
               <button
                 type="button"
                 onClick={() => handleOpenSwapModal()}
-                className="px-2 py-1 text-slate-300 hover:text-white hover:bg-purple-950/60 rounded text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                className="px-2 py-1 text-slate-300 hover:text-white hover:bg-purple-950/60 rounded text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
                 title="Substituição de Cor em Massa (Atalho: R)"
               >
-                <ArrowLeftRight className="w-3.5 h-3.5 text-purple-400" />
-                <span className="hidden lg:inline text-[11px]">Trocar Cor</span>
+                <ArrowLeftRight className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <span className="hidden xl:inline text-[11px] whitespace-nowrap">Trocar Cor</span>
               </button>
             </div>
           )}
 
           {/* ACTIVE BRUSH COLOR SELECTOR (100% Bead Brand Catalog) */}
           {data && (
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setShowPaintPicker(!showPaintPicker)}
-                className="flex items-center gap-2 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-purple-600 rounded-lg px-2.5 py-1 text-xs transition-all cursor-pointer"
-                title="Change paint bead color"
+                className="flex items-center gap-1.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-purple-600 rounded-lg px-2.5 py-1.5 text-xs transition-all cursor-pointer whitespace-nowrap"
+                title="Escolher cor da miçanga para pintar"
               >
-                <span className="text-[10px] uppercase font-semibold text-slate-400">
-                  Paint:
+                <span className="text-[10px] uppercase font-semibold text-slate-400 hidden sm:inline">
+                  Cor:
                 </span>
                 <span
-                  className="w-4 h-4 rounded-full border border-black/40 shadow-inner shrink-0"
+                  className="w-3.5 h-3.5 rounded-full border border-black/40 shadow-inner shrink-0"
                   style={{ backgroundColor: activeColor }}
                 />
-                <span className="font-mono text-purple-300 font-semibold">
-                  {activeColorInfo ? `${activeColorInfo.code} ${activeColorInfo.name}` : "Pick Bead"}
+                <span className="font-mono text-purple-300 font-bold whitespace-nowrap">
+                  {activeColorInfo ? activeColorInfo.code : "Bead"}
                 </span>
+                {activeColorInfo?.name && (
+                  <span className="hidden 2xl:inline text-slate-400 max-w-[90px] truncate text-[11px]">
+                    {activeColorInfo.name}
+                  </span>
+                )}
                 <ChevronRight
-                  className={`w-3 h-3 text-slate-400 transition-transform ${
+                  className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${
                     showPaintPicker ? "rotate-90" : ""
                   }`}
                 />
@@ -959,7 +966,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             className="w-3.5 h-3.5 rounded-full border border-black/40 shadow-inner shrink-0"
                             style={{ backgroundColor: item.hex }}
                           />
-                          <span className="text-[10px] font-mono font-bold text-slate-200">
+                          <span className="text-[10px] font-mono font-bold text-slate-200 whitespace-nowrap">
                             {item.code || ""}
                           </span>
                           <span className="text-[10px] text-slate-400 truncate">
@@ -995,7 +1002,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                               className="w-3.5 h-3.5 rounded-full border border-black/40 shadow-inner shrink-0"
                               style={{ backgroundColor: c.hex }}
                             />
-                            <span className="text-[10px] font-mono font-bold text-slate-200">
+                            <span className="text-[10px] font-mono font-bold text-slate-200 whitespace-nowrap">
                               {c.code}
                             </span>
                             <span className="text-[10px] text-slate-400 truncate">
@@ -1010,54 +1017,57 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               )}
             </div>
           )}
+        </div>
 
+        {/* CENTER SECTION: View Modes (3D, Melted, Flat) & Overlays */}
+        <div className="flex items-center gap-2 shrink-0">
           {/* VIEW MODES: Bead View (3D) vs Melted View (Ironed) vs Flat View */}
-          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1 gap-0.5">
+          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1 gap-0.5 shrink-0">
             <button
               onClick={() => setViewMode("beads")}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 viewMode === "beads"
                   ? "bg-purple-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-white"
               }`}
               title="Visualização 3D com miçangas abertas e furos (pré-ferro)"
             >
-              <CircleDot className="w-3.5 h-3.5" />
-              Bead View
+              <CircleDot className="w-3.5 h-3.5 shrink-0" />
+              <span>Miçangas</span>
             </button>
             <button
               onClick={() => setViewMode("melted")}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 viewMode === "melted"
                   ? "bg-amber-600 text-white shadow-sm shadow-amber-950/40"
                   : "text-slate-400 hover:text-white"
               }`}
               title="Simulação do resultado após passar o ferro quente (miçangas fundidas)"
             >
-              <Flame className="w-3.5 h-3.5 text-amber-300" />
-              Melted
+              <Flame className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+              <span>Passado</span>
             </button>
             <button
               onClick={() => setViewMode("flat")}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 viewMode === "flat"
                   ? "bg-purple-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-white"
               }`}
-              title="Visualização vetorial simples"
+              title="Visualização vetorial simples 2D"
             >
-              <Square className="w-3.5 h-3.5" />
-              Flat
+              <Square className="w-3.5 h-3.5 shrink-0" />
+              <span>Flat</span>
             </button>
           </div>
 
           {/* Sub-selector for Melted Style when Melted is active */}
           {viewMode === "melted" && (
-            <div className="flex items-center bg-amber-950/40 border border-amber-800/60 rounded-lg p-0.5 text-[10px] animate-in fade-in duration-150">
+            <div className="flex items-center bg-amber-950/40 border border-amber-800/60 rounded-lg p-0.5 text-[10px] animate-in fade-in duration-150 shrink-0">
               <button
                 type="button"
                 onClick={() => setMeltStyle("standard")}
-                className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                className={`px-2 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
                   meltStyle === "standard"
                     ? "bg-amber-600 text-white font-bold shadow-sm"
                     : "text-amber-300 hover:text-white"
@@ -1069,7 +1079,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               <button
                 type="button"
                 onClick={() => setMeltStyle("flat_melt")}
-                className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                className={`px-2 py-0.5 rounded transition-colors cursor-pointer whitespace-nowrap ${
                   meltStyle === "flat_melt"
                     ? "bg-amber-600 text-white font-bold shadow-sm"
                     : "text-amber-300 hover:text-white"
@@ -1082,71 +1092,77 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           )}
 
           {/* FEATURE TOGGLES */}
-          <div className="flex items-center space-x-1.5 pl-2 border-l border-slate-800">
+          <div className="flex items-center gap-1 pl-1.5 border-l border-slate-800 shrink-0">
             <button
               onClick={() => setShowRuler(!showRuler)}
-              className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 transition-colors cursor-pointer ${
+              className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap ${
                 showRuler
                   ? "bg-purple-950 border-purple-600 text-purple-200"
                   : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
               }`}
-              title="Toggle coordinate ruler numbers"
+              title="Exibir régua de coordenadas (123)"
             >
-              <Eye className="w-3.5 h-3.5" />
-              123 Ruler
+              <Eye className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xl:inline">Régua</span>
             </button>
 
             <button
               onClick={() => setShowSymbols(!showSymbols)}
-              className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 transition-colors cursor-pointer ${
+              className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap ${
                 showSymbols
                   ? "bg-purple-950 border-purple-600 text-purple-200"
                   : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
               }`}
-              title="Toggle color symbols inside beads"
+              title="Exibir símbolos de cor nas miçangas"
             >
-              <Hash className="w-3.5 h-3.5" />
-              Symbols
+              <Hash className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xl:inline">Símbolos</span>
             </button>
 
             <button
               onClick={() => setShowPegboard(!showPegboard)}
-              className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 transition-colors cursor-pointer ${
+              className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap ${
                 showPegboard
                   ? "bg-rose-950 border-rose-600 text-rose-300"
                   : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
               }`}
-              title="Toggle pegboard modular boundaries"
+              title="Exibir divisões das placas pegboards"
             >
-              <Grid3X3 className="w-3.5 h-3.5" />
-              Pegboards
+              <Grid3X3 className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xl:inline">Placas</span>
             </button>
           </div>
         </div>
 
+        {/* RIGHT SECTION: Grid Specs Badge & Print / Export Action Buttons */}
         {data && (
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <span className="text-xs text-slate-200 font-mono">
-                {data.grid.columns}×{data.grid.rows} | {data.grid.total_beads} Beads
-              </span>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Specs Badge */}
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-300 whitespace-nowrap shrink-0">
+              <span className="text-purple-300 font-semibold">{data.grid.columns}×{data.grid.rows}</span>
+              <span className="text-slate-600">•</span>
+              <span>{data.grid.total_beads.toLocaleString()} beads</span>
             </div>
+
+            {/* Print 1:1 Scale PDF */}
             <button
               onClick={handleDownloadPDF}
               disabled={isExportingPdf}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold border border-emerald-500 flex items-center gap-1.5 transition-colors cursor-pointer shadow-lg shadow-emerald-950/40"
-              title="Printable 1:1 scale A4 PDF with pegboard alignment and shopping checklist"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold border border-emerald-500/80 flex items-center gap-1.5 transition-colors cursor-pointer shadow-md shadow-emerald-950/40 whitespace-nowrap shrink-0"
+              title="Gerar PDF em Escala 1:1 com gabarito para colocar embaixo da placa"
             >
-              <Printer className="w-3.5 h-3.5" />
-              {isExportingPdf ? "Generating PDF..." : "Print 1:1 Scale PDF"}
+              <Printer className="w-3.5 h-3.5 shrink-0" />
+              <span>{isExportingPdf ? "Gerando PDF..." : "Imprimir 1:1 (PDF)"}</span>
             </button>
+
+            {/* Export PNG */}
             <button
               onClick={handleDownloadPNG}
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Download image as PNG"
+              className="px-2.5 py-1.5 bg-slate-950 hover:bg-slate-900 text-slate-200 rounded-lg text-xs font-semibold border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              title="Exportar imagem do padrão como PNG"
             >
-              <Download className="w-3.5 h-3.5" />
-              PNG
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span>PNG</span>
             </button>
           </div>
         )}
@@ -1335,12 +1351,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   >
                     {sym}
                   </span>
-                  <div className="flex flex-col text-left leading-tight">
-                    <span className="text-[10px] text-slate-300 font-mono">
+                  <div className="flex flex-col text-left leading-tight whitespace-nowrap">
+                    <span className="text-[10px] text-slate-300 font-mono truncate max-w-[110px]" title={item.code ? `${item.code} ${item.name}` : item.name}>
                       {item.code ? `${item.code} ${item.name}` : item.name}
                     </span>
                     <span
-                      className={`text-[11px] font-mono font-bold ${
+                      className={`text-[11px] font-mono font-bold whitespace-nowrap ${
                         isFocused ? "text-purple-300" : "text-slate-400"
                       }`}
                     >
