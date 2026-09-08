@@ -403,18 +403,28 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     canvas.height = renderHeight;
     ctx.imageSmoothingEnabled = false;
 
-    // 1. Clear background
-    ctx.fillStyle = "#FAF8F5";
+    // 1. Clear background (Translucent Acrylic Pegboard Plate)
+    // Uses medium-dark slate (#242E40) so black beads (#000000) and white beads (#FFFFFF) both have crisp contrast
+    ctx.fillStyle = "#242E40";
     ctx.fillRect(0, 0, renderWidth, renderHeight);
 
-    // 2. Draw Coordinates Ruler
+    // 2. Draw Coordinates Ruler (Frosted Slate Ruler)
     if (showRuler) {
-      ctx.fillStyle = "#E2E8F0";
+      ctx.fillStyle = "#18212F";
       ctx.fillRect(0, 0, rulerOffset, renderHeight);
       ctx.fillRect(0, 0, renderWidth, rulerOffset);
 
-      ctx.fillStyle = "#64748B";
-      ctx.font = "bold 11px monospace";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(rulerOffset, 0);
+      ctx.lineTo(rulerOffset, renderHeight);
+      ctx.moveTo(0, rulerOffset);
+      ctx.lineTo(renderWidth, rulerOffset);
+      ctx.stroke();
+
+      ctx.fillStyle = "#CBD5E1";
+      ctx.font = "bold 10px monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -433,9 +443,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       }
     }
 
-    // 3. Faint Grid (Disabled in Melted View for authentic physical art appearance)
+    // 3. Board Grid Lines & Acrylic Peg Pins
     if (viewMode !== "melted") {
-      ctx.strokeStyle = "#E2E8F0";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
       ctx.lineWidth = 1;
 
       for (let c = 0; c <= cols; c++) {
@@ -452,6 +462,30 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         ctx.moveTo(rulerOffset, y);
         ctx.lineTo(renderWidth, y);
         ctx.stroke();
+      }
+
+      // Draw authentic acrylic pegboard pins for empty cells
+      const matrix = data.matrix;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const hex = matrix[r] ? matrix[r][c] : null;
+          if (!hex || hex === "TRANSPARENT") {
+            const cx = rulerOffset + c * beadCellPx + beadCellPx / 2;
+            const cy = rulerOffset + r * beadCellPx + beadCellPx / 2;
+
+            // Outer acrylic pin ring
+            ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Center acrylic pin tip
+            ctx.fillStyle = "rgba(255, 255, 255, 0.40)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, 1.0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
       }
     }
 
@@ -488,13 +522,22 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
           ctx.fill();
 
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
-          ctx.lineWidth = 1.2;
+          // Outer subtle bead boundary stroke
+          ctx.strokeStyle = "rgba(0, 0, 0, 0.45)";
+          ctx.lineWidth = 1.0;
+          ctx.beginPath();
+          ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Top highlight bevel (shininess on dark/light beads)
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+          ctx.lineWidth = 1.3;
           ctx.beginPath();
           ctx.arc(cx, cy, outerR - 0.6, -Math.PI * 0.8, Math.PI * 0.2);
           ctx.stroke();
 
-          ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+          // Bottom shadow bevel
+          ctx.strokeStyle = "rgba(0, 0, 0, 0.40)";
           ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.arc(cx, cy, outerR - 0.6, Math.PI * 0.2, Math.PI * 1.2);
@@ -1035,7 +1078,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               onClick={() => setViewMode("beads")}
               className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 viewMode === "beads"
-                  ? "bg-purple-600 text-white shadow-sm"
+                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-950/50"
                   : "text-slate-400 hover:text-white"
               }`}
               title="Bead View (3D open beads before ironing)"
@@ -1128,7 +1171,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               onClick={() => setViewMode("flat")}
               className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 viewMode === "flat"
-                  ? "bg-purple-600 text-white shadow-sm"
+                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-950/50"
                   : "text-slate-400 hover:text-white"
               }`}
               title="Flat 2D pixel view"
@@ -1181,36 +1224,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           </div>
         </div>
 
-        {/* RIGHT SECTION: Grid Specs Badge & Print / Export Action Buttons */}
+        {/* RIGHT SECTION: Grid Specs Badge */}
         {data && (
           <div className="flex items-center gap-2 shrink-0">
-            {/* Specs Badge */}
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-300 whitespace-nowrap shrink-0">
-              <span className="text-purple-300 font-semibold">{data.grid.columns}×{data.grid.rows}</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-300 whitespace-nowrap shrink-0 shadow-inner">
+              <span className="text-indigo-400 font-semibold">{data.grid.columns}×{data.grid.rows}</span>
               <span className="text-slate-600">•</span>
-              <span>{data.grid.total_beads.toLocaleString()} beads</span>
+              <span className="text-slate-200">{data.grid.total_beads.toLocaleString()} beads</span>
             </div>
-
-            {/* Print 1:1 Scale PDF */}
-            <button
-              onClick={handleDownloadPDF}
-              disabled={isExportingPdf}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold border border-emerald-500/80 flex items-center gap-1.5 transition-colors cursor-pointer shadow-md shadow-emerald-950/40 whitespace-nowrap shrink-0"
-              title="Printable 1:1 scale actual size PDF pattern"
-            >
-              <Printer className="w-3.5 h-3.5 shrink-0" />
-              <span>{isExportingPdf ? "Generating..." : "Print 1:1 (PDF)"}</span>
-            </button>
-
-            {/* Export PNG */}
-            <button
-              onClick={handleDownloadPNG}
-              className="px-2.5 py-1.5 bg-slate-950 hover:bg-slate-900 text-slate-200 rounded-lg text-xs font-semibold border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
-              title="Download pattern image as PNG"
-            >
-              <Download className="w-3.5 h-3.5 shrink-0" />
-              <span>PNG</span>
-            </button>
           </div>
         )}
       </header>
@@ -1218,11 +1239,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       {/* Main Canvas Viewport */}
       <div
         ref={containerRef}
-        className={`flex-1 overflow-auto flex items-center justify-center p-8 transition-colors ${
-          viewMode === "melted"
-            ? "bg-[#090d16]"
-            : "bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]"
-        }`}
+        className="flex-1 overflow-auto flex items-center justify-center p-8 transition-colors bg-[#080B10] [background-image:radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px]"
       >
         {data ? (
           <div
@@ -1231,10 +1248,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               transformOrigin: "center center",
               transition: "transform 0.1s ease-out",
             }}
-            className={`rounded-sm select-none p-1.5 transition-all ${
+            className={`rounded-2xl select-none p-2 transition-all ${
               viewMode === "melted"
-                ? "shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-amber-900/30 bg-slate-900/90"
-                : "shadow-2xl border-2 border-slate-700 bg-white"
+                ? "shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-amber-900/40 bg-slate-950"
+                : "shadow-[0_25px_60px_rgba(0,0,0,0.85)] border-2 border-slate-700/80 bg-[#16202E]"
             }`}
           >
             <canvas

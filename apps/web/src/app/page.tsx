@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { CanvasWorkspace } from "@/components/CanvasWorkspace";
 import { ProcessResponse, PhysicalParams, BrandInfo } from "@/types";
@@ -15,10 +16,10 @@ const DEFAULT_BRANDS: BrandInfo[] = [
 
 export default function Home() {
   const [params, setParams] = useState<PhysicalParams>({
-    widthCm: 13.0,
-    heightCm: 13.0,
-    beadSizeCm: 0.26,      // 2.6mm Mini beads (50x50 pins)
-    pegboardSizeCm: 13.0,  // 50x50 Mini Pegboard (13.0cm)
+    widthCm: 14.5,
+    heightCm: 14.5,
+    beadSizeCm: 0.5,       // Default: 5.0mm Midi beads (29x29 pins standard)
+    pegboardSizeCm: 14.5,  // 29x29 Midi Pegboard (14.5cm)
     cropX: 0.0,
     cropY: 0.0,
     cropW: 1.0,
@@ -40,6 +41,7 @@ export default function Home() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [processedData, setProcessedData] = useState<ProcessResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
   // Fetch full brand catalogs on mount
   useEffect(() => {
@@ -59,11 +61,33 @@ export default function Home() {
     fetchBrands();
   }, []);
 
+  const DEFAULT_PARAMS: PhysicalParams = {
+    widthCm: 14.5,
+    heightCm: 14.5,
+    beadSizeCm: 0.5,       // Default: 5.0mm Midi beads (29x29 pins standard)
+    pegboardSizeCm: 14.5,  // 29x29 Midi Pegboard (14.5cm)
+    cropX: 0.0,
+    cropY: 0.0,
+    cropW: 1.0,
+    cropH: 1.0,
+    enhanceEdges: true,
+    backgroundMode: "cutout",
+    gridMode: "auto",
+    bgTolerance: 18,
+    flatColors: false,
+    decodeCellCodes: false,
+    sampleCornersBg: false,
+    detectRedDividers: false,
+    customBgHex: undefined,
+  };
+
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     setProcessedData(null);
+    setParams(DEFAULT_PARAMS);
+    setPalette([]);
   };
 
   const handleBrandChange = (brandId: string) => {
@@ -121,29 +145,91 @@ export default function Home() {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!processedData) return;
+    setIsExportingPdf(true);
+    try {
+      const currentBrandObj = brands.find((b) => b.id === selectedBrand) || brands[0];
+      const payload = {
+        matrix: processedData.matrix,
+        grid: processedData.grid,
+        color_counts: processedData.color_counts,
+        brand: currentBrandObj?.id || selectedBrand || "perler",
+        pegboard_size_cm: params.pegboardSizeCm || 14.5,
+      };
+
+      const res = await fetch("/api/export-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to generate PDF");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${currentBrandObj?.id || "perler"}-pattern-1to1-scale.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("PDF export failed:", err);
+      alert(`Error generating PDF: ${err.message || "Network error"}`);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handleExportPng = () => {
+    const canvas = document.querySelector("canvas");
+    if (!canvas || !processedData) return;
+    const link = document.createElement("a");
+    link.download = `perler-pattern-${selectedBrand}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans">
-      <Sidebar
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#080B10] font-sans text-slate-100">
+      {/* Global Precision Header */}
+      <Header
         params={params}
-        onParamsChange={setParams}
-        selectedBrand={selectedBrand}
-        onBrandChange={handleBrandChange}
-        brands={brands}
-        palette={palette}
-        onPaletteChange={setPalette}
-        onProcess={handleProcess}
-        isLoading={isLoading}
-        selectedFile={selectedFile}
-        onFileSelect={handleFileSelect}
-      />
-      <CanvasWorkspace
         data={processedData}
-        onDataChange={setProcessedData}
-        params={params}
-        previewUrl={previewUrl}
         selectedBrand={selectedBrand}
         brands={brands}
+        onExportPdf={handleExportPdf}
+        onExportPng={handleExportPng}
+        isExportingPdf={isExportingPdf}
       />
-    </main>
+
+      {/* Main Workspace Layout */}
+      <div className="flex flex-1 overflow-hidden relative">
+        <Sidebar
+          params={params}
+          onParamsChange={setParams}
+          selectedBrand={selectedBrand}
+          onBrandChange={handleBrandChange}
+          brands={brands}
+          palette={palette}
+          onPaletteChange={setPalette}
+          onProcess={handleProcess}
+          isLoading={isLoading}
+          selectedFile={selectedFile}
+          onFileSelect={handleFileSelect}
+        />
+        <CanvasWorkspace
+          data={processedData}
+          onDataChange={setProcessedData}
+          params={params}
+          previewUrl={previewUrl}
+          selectedBrand={selectedBrand}
+          brands={brands}
+        />
+      </div>
+    </div>
   );
 }
