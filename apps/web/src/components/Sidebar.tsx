@@ -322,6 +322,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             })}
           </div>
 
+          {/* Neutral physical dimension clarification */}
+          {isMini50 && (
+            <p className="text-[10px] text-slate-400 leading-relaxed bg-slate-950/60 p-2 rounded border border-slate-800/60">
+              <span className="text-slate-300 font-medium">Área útil:</span> 13,0 × 13,0 cm (50×50 pinos). Bordas externas e travas somam ~14 cm na régua.
+            </p>
+          )}
+          {isMidi29 && (
+            <p className="text-[10px] text-slate-400 leading-relaxed bg-slate-950/60 p-2 rounded border border-slate-800/60">
+              <span className="text-slate-300 font-medium">Área útil:</span> 14,5 × 14,5 cm (29×29 pinos). Borda plástica externa soma ~15 cm na régua.
+            </p>
+          )}
+
           {/* Quick Sizing by Board Count */}
           <div className="pt-2 border-t border-slate-800/80">
             <div className="flex items-center justify-between mb-1.5">
