@@ -403,28 +403,18 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     canvas.height = renderHeight;
     ctx.imageSmoothingEnabled = false;
 
-    // 1. Clear background (Translucent Acrylic Pegboard Plate)
-    // Uses medium-dark slate (#242E40) so black beads (#000000) and white beads (#FFFFFF) both have crisp contrast
-    ctx.fillStyle = "#242E40";
+    // 1. Clear background
+    ctx.fillStyle = "#FAF8F5";
     ctx.fillRect(0, 0, renderWidth, renderHeight);
 
-    // 2. Draw Coordinates Ruler (Frosted Slate Ruler)
+    // 2. Draw Coordinates Ruler
     if (showRuler) {
-      ctx.fillStyle = "#18212F";
+      ctx.fillStyle = "#E2E8F0";
       ctx.fillRect(0, 0, rulerOffset, renderHeight);
       ctx.fillRect(0, 0, renderWidth, rulerOffset);
 
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(rulerOffset, 0);
-      ctx.lineTo(rulerOffset, renderHeight);
-      ctx.moveTo(0, rulerOffset);
-      ctx.lineTo(renderWidth, rulerOffset);
-      ctx.stroke();
-
-      ctx.fillStyle = "#CBD5E1";
-      ctx.font = "bold 10px monospace";
+      ctx.fillStyle = "#64748B";
+      ctx.font = "bold 11px monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -443,9 +433,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       }
     }
 
-    // 3. Board Grid Lines & Acrylic Peg Pins
+    // 3. Faint Grid (Disabled in Melted View for authentic physical art appearance)
     if (viewMode !== "melted") {
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.strokeStyle = "#E2E8F0";
       ctx.lineWidth = 1;
 
       for (let c = 0; c <= cols; c++) {
@@ -462,30 +452,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         ctx.moveTo(rulerOffset, y);
         ctx.lineTo(renderWidth, y);
         ctx.stroke();
-      }
-
-      // Draw authentic acrylic pegboard pins for empty cells
-      const matrix = data.matrix;
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const hex = matrix[r] ? matrix[r][c] : null;
-          if (!hex || hex === "TRANSPARENT") {
-            const cx = rulerOffset + c * beadCellPx + beadCellPx / 2;
-            const cy = rulerOffset + r * beadCellPx + beadCellPx / 2;
-
-            // Outer acrylic pin ring
-            ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
-            ctx.beginPath();
-            ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Center acrylic pin tip
-            ctx.fillStyle = "rgba(255, 255, 255, 0.40)";
-            ctx.beginPath();
-            ctx.arc(cx, cy, 1.0, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
       }
     }
 
@@ -522,22 +488,13 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
           ctx.fill();
 
-          // Outer subtle bead boundary stroke
-          ctx.strokeStyle = "rgba(0, 0, 0, 0.45)";
-          ctx.lineWidth = 1.0;
-          ctx.beginPath();
-          ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-          ctx.stroke();
-
-          // Top highlight bevel (shininess on dark/light beads)
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
-          ctx.lineWidth = 1.3;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+          ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.arc(cx, cy, outerR - 0.6, -Math.PI * 0.8, Math.PI * 0.2);
           ctx.stroke();
 
-          // Bottom shadow bevel
-          ctx.strokeStyle = "rgba(0, 0, 0, 0.40)";
+          ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
           ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.arc(cx, cy, outerR - 0.6, Math.PI * 0.2, Math.PI * 1.2);
@@ -1239,7 +1196,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       {/* Main Canvas Viewport */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto flex items-center justify-center p-8 transition-colors bg-[#080B10] [background-image:radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px]"
+        className={`flex-1 overflow-auto flex items-center justify-center p-8 transition-colors ${
+          viewMode === "melted"
+            ? "bg-[#090d16]"
+            : "bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]"
+        }`}
       >
         {data ? (
           <div
@@ -1248,10 +1209,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               transformOrigin: "center center",
               transition: "transform 0.1s ease-out",
             }}
-            className={`rounded-2xl select-none p-2 transition-all ${
+            className={`rounded-sm select-none p-1.5 transition-all ${
               viewMode === "melted"
-                ? "shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-amber-900/40 bg-slate-950"
-                : "shadow-[0_25px_60px_rgba(0,0,0,0.85)] border-2 border-slate-700/80 bg-[#16202E]"
+                ? "shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-amber-900/30 bg-slate-900/90"
+                : "shadow-2xl border-2 border-slate-700 bg-white"
             }`}
           >
             <canvas
