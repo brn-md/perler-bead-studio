@@ -1,7 +1,5 @@
-# Perler Studio 🎨✨
+# Perler Bead Studio 
 > Universal Bead Pattern & Pegboard Generator for Perler, Artkal, Hama, Nabbi, and MARD Beads.
-
-A modern, 100% local web application designed for bead craft crafters. Converts photos, images, and digital bead templates into physical pegboard matrices, preserving proportions and providing shopping inventories by brand.
 
 ## Key Features
 - **Universal Image Processor**:
