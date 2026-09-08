@@ -18,6 +18,9 @@ import {
   X,
   AlertTriangle,
   Info,
+  ChevronDown,
+  ChevronRight,
+  Wand2,
 } from "lucide-react";
 import { PaletteManager } from "./PaletteManager";
 import { PhysicalParams, BrandInfo } from "@/types";
@@ -86,6 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [aspectRatio, setAspectRatio] = useState<number>(1.0);
   const [showAdvancedHardware, setShowAdvancedHardware] = useState<boolean>(false);
   const [showSizingHelp, setShowSizingHelp] = useState<boolean>(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
 
   useEffect(() => {
     if (selectedFile) {
@@ -663,6 +667,200 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span>▦ Placa Sólida</span>
             </button>
           </div>
+        </div>
+
+        {/* MODO AVANÇADO / CORREÇÃO DE IMAGEM */}
+        <div className="space-y-2 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer text-left w-full"
+            >
+              <Settings2 className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+              <div className="flex-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  Filtros Avançados & Correção
+                  {(params.gridMode === "force" || params.flatColors || (params.bgTolerance && params.bgTolerance !== 30)) && (
+                    <span className="px-1.5 py-0.2 text-[9px] bg-pink-500/20 text-pink-300 rounded-full border border-pink-500/30">
+                      Ativo
+                    </span>
+                  )}
+                </span>
+                {showAdvancedFilters ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                )}
+              </div>
+            </button>
+          </div>
+
+          {showAdvancedFilters && (
+            <div className="pt-2 border-t border-slate-800/80 space-y-3 animate-in fade-in duration-200">
+              {/* Preset 1-Click Fix */}
+              <div className="p-2.5 bg-gradient-to-r from-pink-950/40 to-purple-950/40 border border-pink-800/40 rounded-lg space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-pink-200 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-pink-400" />
+                    Preset de Correção Inteligente
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onParamsChange({
+                      ...params,
+                      gridMode: "force",
+                      bgTolerance: 35,
+                      flatColors: true,
+                      backgroundMode: "cutout",
+                    });
+                  }}
+                  className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-semibold border flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    params.gridMode === "force" && params.flatColors
+                      ? "bg-pink-600 text-white border-pink-400 shadow-md shadow-pink-900/40"
+                      : "bg-pink-950/60 border-pink-700/60 text-pink-200 hover:bg-pink-900/60"
+                  }`}
+                >
+                  <span>🎀 Fix Fundo Rosa / Grade & Sombra</span>
+                  {params.gridMode === "force" && params.flatColors && (
+                    <Check className="w-3.5 h-3.5 text-white" />
+                  )}
+                </button>
+                <p className="text-[10px] text-pink-300/80 leading-relaxed">
+                  Ideal para imagens com fundo rosa claro, grades desenhadas e sombras indesejadas. Força alinhamento dos pixels, isola o fundo pela cor da borda e unifica tons secundários em branco liso.
+                </p>
+              </div>
+
+              {/* Controle 1: Detector de Grade */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-medium text-slate-300">
+                    Detector Universal de Grade
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {params.gridMode === "force" ? "Forçar Grade" : params.gridMode === "off" ? "Desativado" : "Automático"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange("gridMode", "auto")}
+                    className={`py-1 px-2 rounded text-[10px] font-medium border transition-colors cursor-pointer ${
+                      (!params.gridMode || params.gridMode === "auto")
+                        ? "bg-purple-950 border-purple-600 text-purple-200"
+                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Auto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange("gridMode", "force")}
+                    className={`py-1 px-2 rounded text-[10px] font-medium border transition-colors cursor-pointer ${
+                      params.gridMode === "force"
+                        ? "bg-purple-950 border-purple-600 text-purple-200"
+                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Forçar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange("gridMode", "off")}
+                    className={`py-1 px-2 rounded text-[10px] font-medium border transition-colors cursor-pointer ${
+                      params.gridMode === "off"
+                        ? "bg-purple-950 border-purple-600 text-purple-200"
+                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Desativar
+                  </button>
+                </div>
+                <p className="text-[9.5px] text-slate-400 leading-tight">
+                  Identifica a frequência dos pixels desenhados (6px a 40px) para que cada quadrado vire exatamente 1 bead.
+                </p>
+              </div>
+
+              {/* Controle 2: Tolerância de Fundo da Borda */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-medium text-slate-300">
+                    Tolerância de Fundo da Borda (ΔE)
+                  </label>
+                  <span className="text-[10px] text-purple-300 font-mono font-semibold">
+                    {params.bgTolerance ?? 30}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="60"
+                  step="5"
+                  value={params.bgTolerance ?? 30}
+                  onChange={(e) => handleInputChange("bgTolerance", parseFloat(e.target.value))}
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                />
+                <div className="flex justify-between text-[9px] text-slate-500 font-mono">
+                  <span>10 (Estrito)</span>
+                  <span>30 (Padrão)</span>
+                  <span>60 (Amplo)</span>
+                </div>
+                <p className="text-[9.5px] text-slate-400 leading-tight">
+                  Amostra as cores que tocam a borda da imagem e remove o fundo por proximidade perceptual, preservando detalhes como roupas e laços.
+                </p>
+              </div>
+
+              {/* Controle 3: Simplificação de Sombras / Tons Secundários */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-medium text-slate-300">
+                    Filtro de Sombras / Corpo Branco
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleInputChange("flatColors", !params.flatColors)}
+                  className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors cursor-pointer ${
+                    params.flatColors
+                      ? "bg-purple-950/80 border-purple-600 text-purple-200"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <span>Unificar cinzas claros em Branco Liso</span>
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                    params.flatColors ? "bg-purple-600 border-purple-400 text-white" : "border-slate-700 bg-slate-900"
+                  }`}>
+                    {params.flatColors && <Check className="w-3 h-3" />}
+                  </div>
+                </button>
+                <p className="text-[9.5px] text-slate-400 leading-tight">
+                  Elimina sombreamento cinza secundário no corpo (ex: músculos/sombra de pixel art) para deixar a peça 100% branca e uniforme.
+                </p>
+              </div>
+
+              {/* Botão Reset */}
+              {(params.gridMode !== "auto" || params.flatColors || params.bgTolerance !== 30) && (
+                <div className="pt-1 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onParamsChange({
+                        ...params,
+                        gridMode: "auto",
+                        bgTolerance: 30,
+                        flatColors: false,
+                      });
+                    }}
+                    className="text-[10px] text-slate-400 hover:text-slate-200 underline cursor-pointer"
+                  >
+                    Restaurar padrões de imagem
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ETAPA 6: Resumo Técnico & Botão de Geração */}

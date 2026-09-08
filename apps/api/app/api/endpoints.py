@@ -130,7 +130,10 @@ async def process_image_endpoint(
     crop_h: Optional[float] = Form(1.0, description="Relative crop height (0.0 to 1.0)"),
     enhance_edges: Optional[bool] = Form(True, description="Enable bead hole filling and edge enhancement"),
     isolate_subject: Optional[bool] = Form(True, description="Automatically remove background fabric/table"),
-    background_mode: Optional[str] = Form("cutout", description="Background mode: 'cutout' (transparent silhouette) or 'solid' (fill plate with beads)")
+    background_mode: Optional[str] = Form("cutout", description="Background mode: 'cutout' (transparent silhouette) or 'solid' (fill plate with beads)"),
+    grid_mode: Optional[str] = Form("auto", description="Grid detector mode: 'auto', 'force', or 'off'"),
+    bg_tolerance: Optional[float] = Form(30.0, description="Perimeter background Delta-E color tolerance (0-100)"),
+    flat_colors: Optional[bool] = Form(False, description="Flatten noise and secondary shading into pure base colors")
 ):
     if width_cm <= 0 or height_cm <= 0 or bead_size_cm <= 0:
         raise HTTPException(
@@ -166,7 +169,10 @@ async def process_image_endpoint(
             crop_h=crop_h,
             enhance_edges=enhance_edges,
             isolate_subject=isolate_subject,
-            background_mode=background_mode or "cutout"
+            background_mode=background_mode or "cutout",
+            grid_mode=grid_mode or "auto",
+            bg_tolerance=float(bg_tolerance) if bg_tolerance is not None else 30.0,
+            flat_colors=bool(flat_colors)
         )
         return result
     except ValueError as ve:

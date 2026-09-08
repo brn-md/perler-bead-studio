@@ -39,6 +39,9 @@ export interface PhysicalParams {
   cropH: number;
   enhanceEdges: boolean;
   backgroundMode: "cutout" | "solid";
+  gridMode?: "auto" | "force" | "off";
+  bgTolerance?: number;
+  flatColors?: boolean;
 }
 
 export interface BeadColor {

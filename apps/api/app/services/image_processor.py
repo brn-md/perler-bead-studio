@@ -73,7 +73,10 @@ def process_pixel_art(
     crop_h: Optional[float] = 1.0,
     enhance_edges: bool = True,
     isolate_subject: bool = True,
-    background_mode: str = "cutout"
+    background_mode: str = "cutout",
+    grid_mode: str = "auto",
+    bg_tolerance: float = 30.0,
+    flat_colors: bool = False
 ) -> Dict[str, Any]:
     nparr = np.frombuffer(image_bytes, np.uint8)
     img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -94,8 +97,12 @@ def process_pixel_art(
     target_cols = max(1, int(round(width_cm / bead_size_cm)))
     target_rows = max(1, int(round(height_cm / bead_size_cm)))
 
-    # 1. Check if the image is an existing bead grid template (like the dog or mario)
-    grid_result = detect_and_sample_grid_template(img_bgr)
+    # 1. Grid detection (auto, force or off)
+    grid_result = None
+    if grid_mode != "off":
+        force = (grid_mode == "force")
+        grid_result = detect_and_sample_grid_template(img_bgr, force_grid=force, bg_tolerance=bg_tolerance)
+
     if grid_result is not None:
         craft_rgb, craft_mask = grid_result
     else:
@@ -117,6 +124,17 @@ def process_pixel_art(
     # Nearest-neighbor interpolation preserves clean pixel boundaries
     resized_craft_rgb = cv2.resize(craft_rgb, (fit_w, fit_h), interpolation=cv2.INTER_NEAREST)
     resized_craft_mask = cv2.resize(craft_mask, (fit_w, fit_h), interpolation=cv2.INTER_NEAREST)
+
+    # Optional Flat Shading: unify light grey shadows into pure white
+    if flat_colors:
+        # If color is near-neutral light grey (R, G, B > 185 and diff < 20), turn into pure white
+        r = resized_craft_rgb[:, :, 0].astype(int)
+        g = resized_craft_rgb[:, :, 1].astype(int)
+        b = resized_craft_rgb[:, :, 2].astype(int)
+        max_c = np.maximum(np.maximum(r, g), b)
+        min_c = np.minimum(np.minimum(r, g), b)
+        is_grey_shadow = (min_c > 105) & ((max_c - min_c) < 25)
+        resized_craft_rgb[is_grey_shadow] = [255, 255, 255]
 
     # Center craft inside the full matrix
     offset_x = (target_cols - fit_w) // 2

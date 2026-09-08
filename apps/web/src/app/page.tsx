@@ -25,6 +25,9 @@ export default function Home() {
     cropH: 1.0,
     enhanceEdges: true,
     backgroundMode: "cutout",
+    gridMode: "auto",
+    bgTolerance: 30,
+    flatColors: false,
   });
 
   const [brands, setBrands] = useState<BrandInfo[]>(DEFAULT_BRANDS);
@@ -81,6 +84,9 @@ export default function Home() {
       formData.append("enhance_edges", params.enhanceEdges ? "true" : "false");
       formData.append("isolate_subject", "true");
       formData.append("background_mode", params.backgroundMode);
+      formData.append("grid_mode", params.gridMode || "auto");
+      formData.append("bg_tolerance", (params.bgTolerance ?? 30).toString());
+      formData.append("flat_colors", params.flatColors ? "true" : "false");
 
       if (palette.length > 0) {
         formData.append("palette_hex", JSON.stringify(palette));
